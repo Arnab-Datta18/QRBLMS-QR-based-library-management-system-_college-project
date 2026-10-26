@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Archives | TCEA Library</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            /* Upgraded to the energetic gradient */
+            background: linear-gradient(135deg, #e0e5ec 0%, #f8f9fa 100%);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        /* --- SIGN OUT BUTTON FIX --- */
+        .logout-link { color: #DA291C !important; font-weight: 600; }
+        .logout-link:hover { color: #ffffff !important; }
+        /* --- ENERGETIC 3D FLOATING BACKGROUND ORBS --- */
+        .bg-shape {
+            position: fixed;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.4;
+            animation: float 12s infinite ease-in-out alternate;
+        }
+        .bg-shape-1 {
+            width: 500px; height: 500px;
+            background: #DA291C; /* TCEA Red */
+            top: -100px; right: -50px;
+            border-radius: 50%;
+        }
+        .bg-shape-2 {
+            width: 600px; height: 600px;
+            background: #212529; /* TCEA Dark */
+            bottom: -150px; left: -100px;
+            border-radius: 50%;
+            animation-delay: -6s;
+        }
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(50px) scale(1.05); }
+        }
+
+        /* --- SIDEBAR --- */
+        .dashboard-container { display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 260px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: #212529;
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .sidebar-logo img {
+            width: 100px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .nav-link {
+            color: #495057;
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+            background: linear-gradient(135deg, #DA291C, #b51f15);
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.3);
+            transform: translateX(5px);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 40px;
+        }
+
+        /* --- GLASS PANELS --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 25px;
+        }
+
+        /* --- DOCUMENT CARDS (FOR STUDENTS) --- */
+        .doc-card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-top: 5px solid #212529;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+        .doc-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.1);
+            border-top-color: #DA291C;
+        }
+        .doc-icon {
+            font-size: 2.5rem;
+            color: #DA291C;
+        }
+
+        /* --- CUSTOM TABLES (FOR LIBRARIAN) --- */
+        .table-custom {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 5px;
+        }
+        .table-custom th {
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+        }
+        .table-custom tbody tr {
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .table-custom tbody tr:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .table-custom td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border: none;
+            color: #212529;
+            font-weight: 500;
+        }
+        .table-custom td:first-child { border-radius: 10px 0 0 10px; }
+        .table-custom td:last-child { border-radius: 0 10px 10px 0; }
+
+        /* Inputs & Buttons */
+        input.form-control, select.form-select {
+            background-color: #f3f4f7;
+            border: 2px solid transparent;
+            padding: 10px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            color: #495057;
+            cursor: pointer;
+        }
+        input.form-control:focus, select.form-select:focus {
+            background-color: #fff;
+            border-color: #DA291C;
+            box-shadow: 0 4px 15px rgba(218, 41, 28, 0.15);
+        }
+
+        .btn-tcea {
+            background: linear-gradient(135deg, #DA291C, #b51f15);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 25px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(218, 41, 28, 0.25);
+        }
+        .btn-tcea:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+
+        .btn-action {
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 0.80rem;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+
+    <div class="dashboard-container">
+
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
+                <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+            </div>
+
+            {% if session['role'] == 'librarian' %}
+                <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Main</p>
+                <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                <a href="{{ url_for('web.registration') }}" class="nav-link"><i class="bi bi-person-plus-fill"></i> Registration</a>
+                <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
+            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Manage</p>
+                <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam-fill"></i> Inventory</a>
+                <a href="{{ url_for('web.papers_page') }}" class="nav-link active"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
+                <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
+            {% else %}
+                <a href="{{ url_for('web.stu_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                <a href="{{ url_for('web.papers_page') }}" class="nav-link active"><i class="bi bi-cloud-arrow-down-fill"></i> Download Papers</a>
+            {% endif %}
+
+            <div style="position: absolute; bottom: 30px; width: calc(100% - 40px);">
+                <a href="{{ url_for('auth.logout') }}" class="nav-link logout-link"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+
+            <div id="flash-container">
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    {% for m in messages %}
+                      {% set alert_color = 'alert-danger' if 'Error' in m else 'alert-success' %}
+                      {% set icon = 'bi-exclamation-triangle-fill' if 'Error' in m else 'bi-check-circle-fill' %}
+                      <div class="alert {{ alert_color }} shadow-sm border-0 rounded-pill mb-4 flash-msg" role="alert">
+                          <i class="bi {{ icon }} me-2"></i> {{ m }}
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="mb-4">
+                <h2 class="fw-bold" style="color: #212529;">Digital Archives</h2>
+                <p class="text-muted fs-6">Access previous years' question papers and study materials.</p>
+            </div>
+
+            {% if session['role'] == 'librarian' %}
+            <div class="glass-panel mb-5">
+                <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload New Document</h6>
+                <form action="{{ url_for('web.upload_paper') }}" method="POST" enctype="multipart/form-data">
+                    <div class="row g-3 align-items-center">
+
+                        <div class="col-md-2">
+                            <select name="course" id="courseSelect" class="form-select" required>
+                                <option value="" disabled selected>Course</option>
+                                <option value="Diploma">Diploma</option>
+                                <option value="B.Tech">B.Tech</option>
+                                <option value="M.Tech">M.Tech</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="dept" id="deptSelect" class="form-select" required>
+                                <option value="" disabled selected>Department</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="sem" id="semSelect" class="form-select" required>
+                                <option value="" disabled selected>Semester</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="file" name="file" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-tcea w-100 m-0">Upload</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <div class="glass-panel">
+                <h5 class="fw-bold mb-4" style="color: #212529;"><i class="bi bi-file-earmark-text-fill text-danger me-2"></i>Available Documents</h5>
+
+                {% if not papers %}
+                <div class="alert bg-white text-muted shadow-sm border-0 rounded-3 mb-0">
+                    <i class="bi bi-info-circle-fill me-2 text-primary"></i> No question papers available for your course criteria right now.
+                </div>
+                {% else %}
+
+                    {% if session['role'] == 'librarian' %}
+                    <div class="table-responsive">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Filename</th>
+                                    <th>Course</th>
+                                    <th>Department</th>
+                                    <th>Semester</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in papers %}
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger me-2 fs-5 align-middle"></i>
+                                        <span class="fw-bold text-dark">{{ p.filename }}</span>
+                                    </td>
+                                    <td><span class="badge bg-secondary px-2 py-1">{{ p.course }}</span></td>
+                                    <td><span class="badge bg-dark px-2 py-1">{{ p.dept }}</span></td>
+                                    <td><span class="fw-medium text-muted">{{ p.semester }}</span></td>
+
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" target="_blank" class="btn btn-primary btn-action">
+                                                <i class="bi bi-eye-fill"></i> View
+                                            </a>
+                                            <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" download class="btn btn-success btn-action">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                            <a href="{{ url_for('web.delete_paper', paper_id=p.id) }}" class="btn btn-danger btn-action" onclick="return confirm('Delete this paper?');">
+                                                <i class="bi bi-trash3-fill"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% else %}
+                    <div class="row g-4">
+                        {% for p in papers %}
+                        <div class="col-md-4">
+                            <div class="doc-card">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <i class="bi bi-file-earmark-pdf-fill doc-icon"></i>
+                                        <div class="text-end">
+                                            <span class="badge bg-secondary mb-1">{{ p.course }}</span><br>
+                                            <span class="badge bg-dark">{{ p.dept }} - Sem {{ p.semester }}</span>
+                                        </div>
+                                    </div>
+                                    <h6 class="fw-bold text-dark text-break">{{ p.filename }}</h6>
+                                </div>
+
+                                <div class="mt-4 d-flex gap-2">
+                                    <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" target="_blank" class="btn btn-primary flex-fill fw-bold shadow-sm" style="border-radius: 8px;">
+                                        <i class="bi bi-eye-fill me-1"></i> View
+                                    </a>
+                                    <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" download class="btn btn-success flex-fill fw-bold shadow-sm" style="border-radius: 8px;">
+                                        <i class="bi bi-download me-1"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(function() {
+                let flashMessages = document.querySelectorAll('.flash-msg');
+                flashMessages.forEach(function(msg) {
+                    msg.style.transition = "opacity 0.5s ease-out";
+                    msg.style.opacity = "0";
+                    setTimeout(function() { msg.remove(); }, 500);
+                });
+            }, 4500);
+
+            const courseSelect = document.getElementById('courseSelect');
+            const deptSelect = document.getElementById('deptSelect');
+            const semSelect = document.getElementById('semSelect');
+
+            if (courseSelect) {
+                const courseRules = {
+                    "Diploma": { maxSemesters: 6, departments: ["CST", "ECE", "EE", "ME", "CE"] },
+                    "B.Tech": { maxSemesters: 8, departments: ["CSE", "ECE", "EE", "ME", "CE", "AIML"] },
+                    "M.Tech": { maxSemesters: 4, departments: ["Microelectronics and VLSI"] }
+                };
+
+                courseSelect.addEventListener('change', function() {
+                    const selectedCourse = this.value;
+                    const rule = courseRules[selectedCourse];
+
+                    deptSelect.innerHTML = '<option value="" disabled selected>Department</option>';
+                    semSelect.innerHTML = '<option value="" disabled selected>Semester</option>';
+
+                    if (rule) {
+                        rule.departments.forEach(function(dept) {
+                            deptSelect.appendChild(new Option(dept, dept));
+                        });
+                        for (let i = 1; i <= rule.maxSemesters; i++) {
+                            semSelect.appendChild(new Option(i, i));
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

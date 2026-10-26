@@ -1,0 +1,64 @@
+TCEA Digital Library 2.0 (QRBLMS) - Master Project Log
+
+================================================================================
+1. BACKEND ARCHITECTURE & ENTERPRISE SECURITY (The Foundation)
+================================================================================
+- Custom Database Migration: Engineered a custom `try/except` startup script in `App.py` using `db.session.execute()` to safely execute raw SQL `ALTER TABLE` commands, appending new columns (`phone`, `profile_pic_url`) without dropping SQLite database records or losing data.
+- Global Error Handling: Built a global error handling net (400, 401, 403, 404, 500). Returns sanitized JSON payloads for `/api/` routes (mobile) and polite HTML error messages for web routes.
+- Audit Logging System: Created an `AuditLog` table tracking database modifications. Injected `log_audit()` into critical routes (web logins, API logins, book additions, book deletions) to track timestamps, actions, and IP addresses.
+- File-Upload Security: Implemented strict validation for profile pictures and PYQ documents (2MB limits, restricted to .jpg/.jpeg/.png or .pdf, and utilized Werkzeug's `secure_filename()` to prevent directory traversal attacks).
+- Authentication Upgrades: Secured user authentication with `werkzeug.security` password hashing. Built a fallback mechanism in login routes to automatically detect and transparently upgrade legacy plaintext passwords to secure hashes upon login.
+- Two-Token API Auth: Engineered a JWT-based two-token system for the mobile app, providing short-lived `access_tokens` and long-lived `refresh_tokens`.
+- Query Optimization: Implemented SQLAlchemy N+1 query optimization using `func.coalesce` and subqueries to significantly speed up dashboard and inventory loading times by batching issue/return counts.
+- Environment Configuration: Enforced `dotenv` loading, removing hardcoded `debug=True` in production and dynamically reading `FLASK_DEBUG` from environment variables.
+
+================================================================================
+2. STUDENT WEB PORTAL (UI & Features)
+================================================================================
+- Modern Aesthetics: Designed a Glassmorphism UI utilizing blurred backdrops (`backdrop-filter: blur`), energetic 3D floating background orbs, 3D hover micro-animations on book cards, and dynamic Flash Message notifications.
+- Contextual Dashboard (`stu_dash.html`): Built a smart Dashboard suggesting "Available Books" filtered automatically by the logged-in student's specific Department and Semester.
+- Active Loans Manager: A table calculating Overdue statuses in real-time, mapping Due Dates (14 days from issue), and actively computing pending Fines (₹5 per late day). Includes a "Recent Activity" timeline for transaction history.
+- Digital PYQ Archive (`paper.html`): Engineered an academic hub for viewing and downloading past question papers in PDF format, automatically filtered to match the student's demographics.
+- Secure Profile Modal: Developed a Bootstrap modal for the top-right header avatar. Includes a live JavaScript image upload preview. Locked academic fields (Name, Roll No, Course, Dept) as read-only to prevent tampering, allowing only Contact details to be edited. Integrates `ui-avatars.com` as a fallback for missing profile pictures.
+- Account Security: Included a secure "Change Password" form requiring verification of the current password before updating.
+
+================================================================================
+3. REACT NATIVE MOBILE APP (Student Companion)
+================================================================================
+- Foundation: Built with React Native and Expo (TypeScript), interfacing with the same unified SQLite database via Flask REST APIs.
+- Biometric Security: Integrated `expo-local-authentication` for FaceID/Fingerprint logins and `expo-secure-store` to encrypt the `refresh_token` vault on the device.
+- UI/UX Scaling: Migrated from deprecated `SafeAreaView` to `react-native-safe-area-context`. Engineered dynamic Greeting headers utilizing `adjustsFontSizeToFit` and `numberOfLines` for responsive, scalable text.
+- Navigation Architecture: Configured a Bottom Tab Navigator (Home, Catalog, Academics) and a Stack Navigator for nested Modals and Notifications.
+- Digital Library Pass (QR): Auto-generates a prominent `STUDENT:<ID>` QR code on the Home screen for the physical library scanner to read. Integrated `expo-clipboard` functionality.
+- Live Inventory Catalog: Built pull-to-refresh FlatLists showing the complete library catalog, complete with contextual search filters and dynamic "In Stock" or "Out of Stock" status badges.
+- Fine Tracker: Added a conditional alert banner directly on the mobile dashboard displaying pending fines.
+
+================================================================================
+4. ADMIN & LIBRARIAN PORTAL (Core Logistics)
+================================================================================
+- Statistical Dashboard (`lib_dash.html`): Live metrics displaying total physical stock, unique book titles, active students, total digital papers, monthly issue/return rates, and total fines collected.
+- Smart Registration Hub:
+  - Bulk CSV Uploads: Parses CSV files to bulk-upload books. Includes strict demographic rule validation (e.g., verifying maximum semesters for B.Tech vs Diploma, validating allowed Departments).
+  - Manual Entry: Forms to manually register a single student or book.
+  - Auto-QR Generation: Automatically builds and saves PNG QR codes to `static/qrcodes/` (formatted as `STUDENT:<ID>` or `BOOK:<ID>`) upon successful registration.
+- Hardware QR Scanning (`scanning.html`): Interfaces with the librarian's physical webcam via OpenCV/Flask (`gen_frames`), parsing QR data to dynamically determine if a scanned item is a book or a student.
+- Transaction Engine (Issue/Return Logic):
+  - Prevents double-issuing (student already holds the book) and out-of-stock issuing.
+  - Department Mismatch Warnings: Alerts the librarian if a student attempts to borrow a book registered to a different course/department.
+  - Return Fine Processing: Calculates days held vs 14-day limit. Prompts the librarian to either "Collect Payment" or "Waive Fine" if an overdue book is scanned.
+- Inventory Management (`inventory.html`): A master list tracking all active holds (showing precisely which student has which book and when it is due). Allows the librarian to manually edit student details, update book stock, or delete records entirely (which safely triggers the deletion of their corresponding physical QR image file).
+- Print QRs Module: A dedicated dashboard view preparing all valid book and student QR codes for bulk physical printing to create library ID cards and book labels.
+- Transaction Reporting: An "Export Report" feature generating a clean CSV dump of the `IssueRecord` history for administrative auditing.
+- Administrative Privileges: Ability to upload PYQ PDFs, manage the digital archive, and force-reset a student's password back to their default Roll Number.
+
+
+--- NEW UPDATES TEMPLATE ---
+
+[Date]: YYYY-MM-DD
+[Feature Added]: 
+- 
+- 
+[Bugs Fixed]: 
+- 
+- 
+```

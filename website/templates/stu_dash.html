@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal | TCEA Library</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        /* --- SIGN OUT BUTTON FIX --- */
+.logout-link { color: #DA291C !important; font-weight: 600; }
+.logout-link:hover { color: #ffffff !important; }
+
+        body {
+            background-color: #e0e5ec;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* --- 3D FLOATING BACKGROUND ORBS --- */
+        .bg-shape {
+            position: fixed;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.5;
+            animation: float 12s infinite ease-in-out alternate;
+        }
+        .bg-shape-1 {
+            width: 500px; height: 500px;
+            background: #DA291C;
+            top: -150px; right: -100px;
+            border-radius: 50%;
+        }
+        .bg-shape-2 {
+            width: 600px; height: 600px;
+            background: #212529;
+            bottom: -200px; left: -150px;
+            border-radius: 50%;
+            animation-delay: -6s;
+        }
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(50px) scale(1.05); }
+        }
+
+        /* --- LAYOUT: SIDEBAR & MAIN CONTENT --- */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: #212529;
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .sidebar-logo img {
+            width: 100px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .nav-link {
+            color: #495057;
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+            background: linear-gradient(135deg, #DA291C, #b51f15);
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.3);
+            transform: translateX(5px);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 40px;
+        }
+
+        /* --- GLASSMORPHIC PANELS --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        /* --- 3D BOOK CARDS --- */
+        .book-card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid #DA291C;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        .book-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 25px rgba(218, 41, 28, 0.15);
+        }
+        .book-title {
+            font-weight: 700;
+            color: #212529;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        .book-author {
+            color: #6c757d;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- CUSTOM TABLES --- */
+        .table-custom {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+        .table-custom th {
+            color: #adb5bd;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            padding: 10px 20px;
+            border: none;
+        }
+        .table-custom tbody tr {
+            background: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+        .table-custom tbody tr:hover {
+            transform: scale(1.01);
+        }
+        .table-custom td {
+            padding: 15px 20px;
+            vertical-align: middle;
+            border: none;
+            color: #212529;
+            font-weight: 500;
+        }
+        .table-custom td:first-child { border-radius: 10px 0 0 10px; }
+        .table-custom td:last-child { border-radius: 0 10px 10px 0; }
+
+        .row-overdue {
+            background-color: #fff5f5 !important;
+            border-left: 4px solid #dc3545;
+        }
+
+        /* --- BADGES --- */
+        .badge-active { background-color: rgba(25, 135, 84, 0.15); color: #198754; }
+        .badge-returned { background-color: rgba(255, 193, 7, 0.2); color: #d39e00; }
+        .badge-issued { background-color: rgba(13, 110, 253, 0.15); color: #0d6efd; }
+
+        /* --- INPUTS & BUTTONS --- */
+        input.form-control {
+            background-color: #f3f4f7;
+            border: 2px solid transparent;
+            padding: 12px 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        input.form-control:focus {
+            background-color: #fff;
+            border-color: #DA291C;
+            box-shadow: 0 4px 15px rgba(218, 41, 28, 0.15);
+        }
+        .btn-tcea {
+            background: linear-gradient(135deg, #DA291C, #b51f15);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(218, 41, 28, 0.3);
+        }
+        .btn-tcea:hover {
+            box-shadow: 0 10px 25px rgba(218, 41, 28, 0.5);
+            transform: translateY(-3px);
+            color: white;
+        }
+
+        /* --- PROFILE MODAL CSS --- */
+        .profile-icon-header {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid #DA291C;
+            transition: transform 0.3s ease;
+        }
+        .profile-icon-header:hover {
+            transform: scale(1.1);
+        }
+        .profile-modal-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(25px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        .profile-pic-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+        }
+        .profile-pic-large {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .camera-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #DA291C;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.4);
+            border: 2px solid #fff;
+            transition: all 0.2s;
+        }
+        .camera-badge:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+
+    <div class="dashboard-container">
+
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
+                <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+            </div>
+
+            <a href="{{ url_for('web.stu_dash') }}" class="nav-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-down-fill"></i> Download Papers</a>
+
+            <div style="position: absolute; bottom: 30px; width: calc(100% - 40px);">
+                <a href="{{ url_for('auth.logout') }}" class="nav-link  logout-link"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+
+            <div id="flash-container">
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    {% for m in messages %}
+                      {% set alert_color = 'alert-danger' if 'Error' in m or 'not found' in m else 'alert-success' %}
+                      {% set icon = 'bi-exclamation-triangle-fill' if 'Error' in m or 'not found' in m else 'bi-check-circle-fill' %}
+
+                      <div class="alert {{ alert_color }} shadow-sm border-0 rounded-pill mb-4 flash-msg" role="alert">
+                          <i class="bi {{ icon }} me-2"></i> {{ m }}
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h2 class="fw-bold" style="color: #212529;">Student Portal</h2>
+                    <p class="text-muted mb-2" style="font-size: 1.1rem;">Welcome back, <span class="fw-bold text-danger">{{ session['user'] }}</span>!</p>
+
+                    <div class="d-flex gap-2 mt-2">
+                        <span class="badge bg-secondary rounded-pill px-3 py-2 shadow-sm fs-6"><i class="bi bi-mortarboard-fill me-1"></i> {{ student.course }}</span>
+                        <span class="badge bg-dark rounded-pill px-3 py-2 shadow-sm fs-6"><i class="bi bi-building me-1"></i> {{ student.dept }}</span>
+                        <span class="badge" style="background-color: #DA291C; border-radius: 50rem; padding: 0.5rem 1rem; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); font-size: 1rem;"><i class="bi bi-calendar3 me-1"></i> Semester {{ student.semester }}</span>
+                    </div>
+                </div>
+                <!-- Profile Icon -->
+                <div>
+                    <img src="{% if student.profile_pic_url %}{% if student.profile_pic_url.startswith('/static/') %}{{ student.profile_pic_url }}{% else %}{{ url_for('static', filename='uploads/' ~ student.profile_pic_url) }}{% endif %}{% else %}https://ui-avatars.com/api/?name={{ student.name | urlencode }}&background=DA291C&color=fff{% endif %}" 
+                         alt="Profile" class="profile-icon-header shadow-sm" data-bs-toggle="modal" data-bs-target="#profileModal">
+                </div>
+            </div>
+
+            <h5 class="fw-bold text-secondary mb-3 mt-5">Available Books For You</h5>
+            <div class="row g-4 mb-5">
+                {% for book in books %}
+                <div class="col-md-4">
+                    <div class="book-card">
+                        <div class="book-title">{{ book.title }}</div>
+                        <div class="book-author">{{ book.author }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <p class="text-muted fst-italic">No books found for your specific Semester/Dept right now.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="glass-panel">
+                <h5 class="fw-bold mb-4" style="color: #212529;"><i class="bi bi-journal-bookmark-fill text-danger me-2"></i>Currently Borrowed Books</h5>
+
+                {% if borrowed_books %}
+                <div class="table-responsive">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Book Title</th>
+                                <th>Issued On</th>
+                                <th>Due Date</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-end">Fine Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bb in borrowed_books %}
+                            <tr class="{% if bb.is_overdue %}row-overdue{% endif %}">
+                                <td class="fw-bold">{{ bb.title }}</td>
+                                <td class="text-muted">{{ bb.issue_date }}</td>
+                                <td class="fw-bold {% if bb.is_overdue %}text-danger{% else %}text-muted{% endif %}">
+                                    {{ bb.due_date }}
+                                </td>
+                                <td class="text-center">
+                                    {% if bb.is_overdue %}
+                                        <span class="badge bg-danger rounded-pill px-3 py-2">OVERDUE</span>
+                                    {% else %}
+                                        <span class="badge badge-active rounded-pill px-3 py-2">ACTIVE</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if bb.fine > 0 %}
+                                        <span class="fw-bold text-danger fs-5">₹{{ bb.fine }}</span>
+                                    {% else %}
+                                        <span class="text-muted fw-bold">₹0</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert bg-white text-muted shadow-sm border-0 rounded-3 mb-0">
+                    <i class="bi bi-info-circle-fill me-2 text-primary"></i> You currently have no borrowed books.
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-7">
+                    <div class="glass-panel h-100">
+                        <h5 class="fw-bold mb-4" style="color: #212529;"><i class="bi bi-clock-history text-danger me-2"></i>Recent Activity</h5>
+                        <ul class="list-group list-group-flush bg-transparent">
+                            {% for item in history %}
+                            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-0 px-0 py-3" style="border-bottom: 1px solid rgba(0,0,0,0.05)!important;">
+                                <div class="fw-medium">{{ item.title }}</div>
+                                <div class="d-flex align-items-center gap-3">
+                                    {% if item.action == 'Return' %}
+                                        <span class="badge badge-returned rounded-pill px-3 py-1">RETURNED</span>
+                                    {% else %}
+                                        <span class="badge badge-issued rounded-pill px-3 py-1">ISSUED</span>
+                                    {% endif %}
+                                    <small class="text-muted" style="font-size: 0.75rem;">{{ item.time.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </li>
+                            {% else %}
+                            <li class="list-group-item bg-transparent text-muted px-0 border-0">No recent activity found.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="glass-panel h-100">
+                        <h5 class="fw-bold mb-4" style="color: #212529;"><i class="bi bi-shield-lock-fill text-danger me-2"></i>Account Security</h5>
+                        <form action="{{ url_for('auth.change_password') }}" method="POST">
+                            <div class="mb-3">
+                                <label class="text-muted fw-bold small ms-1 mb-1">Current Password</label>
+                                <input type="password" name="current_pwd" class="form-control" placeholder="••••••••" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="text-muted fw-bold small ms-1 mb-1">New Password</label>
+                                <input type="password" name="new_pwd" class="form-control" placeholder="••••••••" required>
+                            </div>
+                            <button type="submit" class="btn btn-tcea w-100">Change Password</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content profile-modal-glass">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <form action="{{ url_for('web.update_student_profile') }}" method="POST" enctype="multipart/form-data">
+                        
+                        <div class="text-center mb-4">
+                            <div class="profile-pic-wrapper">
+                                <img id="modalProfileImg" src="{% if student.profile_pic_url %}{% if student.profile_pic_url.startswith('/static/') %}{{ student.profile_pic_url }}{% else %}{{ url_for('static', filename='uploads/' ~ student.profile_pic_url) }}{% endif %}{% else %}https://ui-avatars.com/api/?name={{ student.name | urlencode }}&background=DA291C&color=fff{% endif %}" class="profile-pic-large">
+                                <label for="profileUpload" class="camera-badge">
+                                    <i class="bi bi-camera-fill"></i>
+                                </label>
+                                <input type="file" id="profileUpload" name="profile_pic" class="d-none" accept=".jpg, .jpeg, .png">
+                            </div>
+                            <h5 class="fw-bold mt-3 mb-0">{{ student.name }}</h5>
+                            <p class="text-muted small">{{ student.id }}</p>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="text-muted fw-bold small ms-1 mb-1">Full Name</label>
+                                <input type="text" class="form-control" value="{{ student.name }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted fw-bold small ms-1 mb-1">Course & Dept</label>
+                                <input type="text" class="form-control" value="{{ student.course }} - {{ student.dept }}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted fw-bold small ms-1 mb-1">Semester</label>
+                                <input type="text" class="form-control" value="{{ student.semester }}" disabled>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="text-muted fw-bold small ms-1 mb-1">Email Address</label>
+                                <input type="email" name="email" class="form-control bg-white" value="{{ student.email or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted fw-bold small ms-1 mb-1">Phone Number (Optional)</label>
+                                <input type="tel" name="phone" class="form-control bg-white" value="{{ student.phone or '' }}" pattern="[0-9]{10}">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-tcea w-100">Save Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            setTimeout(function() {
+                let flashMessages = document.querySelectorAll('.flash-msg');
+                flashMessages.forEach(function(msg) {
+                    msg.style.transition = "opacity 0.5s ease-out";
+                    msg.style.opacity = "0";
+                    setTimeout(function() {
+                        msg.remove();
+                    }, 500);
+                });
+            }, 4500);
+
+            let profileUpload = document.getElementById('profileUpload');
+            if (profileUpload) {
+                profileUpload.addEventListener('change', function(event) {
+                    if(event.target.files.length > 0){
+                        let src = URL.createObjectURL(event.target.files[0]);
+                        let preview = document.getElementById('modalProfileImg');
+                        if (preview) preview.src = src;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

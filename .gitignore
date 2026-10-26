@@ -1,0 +1,115 @@
+# ==========================================
+# MASTER .GITIGNORE FOR QRBLMS PROJECT
+# ==========================================
+
+# ------------------------------------------
+# Environment & Sensitive / Secret Files
+# ------------------------------------------
+.env
+.env.*
+.env.local
+.env.*.local
+*.env
+!.env.example
+!*.env.example
+password.txt
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+
+# ------------------------------------------
+# Python Artifacts & Cache
+# ------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.manifest
+*.spec
+
+# ------------------------------------------
+# Virtual Environments
+# ------------------------------------------
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# ------------------------------------------
+# Mobile & Node Dependencies
+# ------------------------------------------
+node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ------------------------------------------
+# Expo, Metro & Build Artifacts
+# ------------------------------------------
+.expo/
+.expo-shared/
+web-build/
+dist/
+build/
+.metro-health-check*
+*.tsbuildinfo
+expo-env.d.ts
+
+# Generated Mobile Native Folders
+ios/
+android/
+
+# Mobile Signing & Native Artifacts
+*.orig.*
+*.jks
+*.p8
+*.mobileprovision
+.kotlin/
+
+# ------------------------------------------
+# IDE, Editor & OS Files
+# ------------------------------------------
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ------------------------------------------
+# Application Database & Runtime Data
+# ------------------------------------------
+library.db
+*.db
+*.sqlite
+*.sqlite3
+instance/
+**/instance/
+**/instance/**
+static/uploads/
+static/qrcodes/
+**/static/uploads/
+**/static/uploads/**
+**/static/qrcodes/
+**/static/qrcodes/**

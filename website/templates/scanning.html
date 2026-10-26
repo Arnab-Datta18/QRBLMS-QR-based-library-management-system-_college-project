@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scanner | TCEA Library</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <style>
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+        body { margin: 0; padding: 0; overflow-x: hidden; min-height: 100vh; background-color: #212529; }
+
+        /* --- EXACT DASHBOARD BACKGROUND --- */
+        .app-background {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: url("{{ url_for('static', filename='college.jpg') }}");
+            background-size: cover; background-position: center;
+            filter: blur(6px) brightness(0.9); z-index: -10; transform: scale(1.1);
+        }
+
+        /* --- SIDEBAR --- */
+        .dashboard-container { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+        .sidebar {
+            width: 260px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px); color: #212529; padding: 30px 20px;
+            position: fixed; height: 100vh; box-shadow: 4px 0 25px rgba(0,0,0,0.15); z-index: 100;
+        }
+
+        .sidebar-logo { text-align: center; margin-bottom: 40px; }
+        .sidebar-logo img { width: 100px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+
+        .nav-link {
+            color: #495057; font-weight: 500; padding: 12px 20px; border-radius: 10px;
+            margin-bottom: 5px; transition: all 0.3s; display: flex; align-items: center; gap: 10px; text-decoration: none;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff; background: linear-gradient(135deg, #DA291C, #b51f15);
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.3); transform: translateX(5px);
+        }
+
+        /* --- SIGN OUT BUTTON FIX --- */
+        .logout-link { color: #DA291C !important; font-weight: 600; }
+        .logout-link:hover { color: #ffffff !important; }
+
+        .main-content { flex: 1; margin-left: 260px; padding: 40px; }
+
+        /* Header Elements */
+        .header-title { color: #ffffff !important; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+        .header-subtitle { color: #f8f9fa !important; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+
+        /* --- GLASS PANELS --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); padding: 30px; height: 100%; display: flex; flex-direction: column;
+        }
+
+        /* --- SCANNER VIDEO CONTAINER --- */
+        .scanner-container {
+            width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 15px; position: relative; overflow: hidden;
+            border: 5px solid rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 30px rgba(0,0,0,1), 0 10px 20px rgba(0,0,0,0.15);
+        }
+        .scanner-feed { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+
+        .scan-line {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: rgba(0, 255, 100, 0.9); box-shadow: 0 0 15px rgba(0, 255, 100, 1), 0 0 30px rgba(0, 255, 100, 0.5);
+            animation: scanMove 2.5s infinite linear; z-index: 10;
+        }
+        @keyframes scanMove { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+
+        /* UI Badges */
+        .badge-custom {
+            display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; padding: 15px;
+            border-radius: 12px; letter-spacing: 1px; text-transform: uppercase; width: 100%; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: all 0.3s;
+        }
+        .badge-danger { background: linear-gradient(135deg, #dc3545, #b02a37); color: white; }
+        .badge-success { background: linear-gradient(135deg, #198754, #146c43); color: white; }
+        .badge-secondary { background: rgba(33, 37, 41, 0.8); color: white; border: 1px solid rgba(255,255,255,0.2); }
+        .badge-primary { background: linear-gradient(135deg, #0d6efd, #0b5ed7); color: white; }
+
+        /* Buttons */
+        .btn-success-gradient { background: linear-gradient(135deg, #198754, #146c43); color: white; border: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-success-gradient:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(25, 135, 84, 0.4); color: white; }
+
+        .btn-danger-gradient { background: linear-gradient(135deg, #dc3545, #b02a37); color: white; border: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-danger-gradient:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(220, 53, 69, 0.4); color: white; }
+
+        .btn-dark-gradient { background: linear-gradient(135deg, #343a40, #212529); color: white; border: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-dark-gradient:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(33, 37, 41, 0.4); color: white; }
+
+        /* Modal Overrides */
+        .modal-content { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 20px; border: none; box-shadow: 0 15px 50px rgba(0,0,0,0.4); overflow: hidden; }
+        .modal-header { border-bottom: none; padding: 20px 25px; }
+        .modal-body { padding: 30px 25px; }
+        .btn-modal { border-radius: 12px; font-weight: 700; letter-spacing: 0.5px; transition: transform 0.2s, box-shadow 0.2s; border: none; }
+        .btn-modal:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="app-background"></div>
+
+    <div class="dashboard-container">
+
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
+                <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+            </div>
+            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Main</p>
+            <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+            <a href="{{ url_for('web.registration') }}" class="nav-link"><i class="bi bi-person-plus-fill"></i> Registration</a>
+            <a href="{{ url_for('web.scanning') }}" class="nav-link active"><i class="bi bi-upc-scan"></i> Scanning</a>
+            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Manage</p>
+            <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam-fill"></i> Inventory</a>
+            <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
+            <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
+
+            <div style="position: absolute; bottom: 30px; width: calc(100% - 40px);">
+                <a href="{{ url_for('auth.logout') }}" class="nav-link logout-link"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="mb-5">
+                <h2 class="fw-bold header-title mb-1 text-uppercase" style="letter-spacing: 1px;">Library Smart Scanner</h2>
+                <p class="fs-6 header-subtitle">Scan Student ID first, then scan Books to Issue or Return.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="glass-panel">
+                        <h5 class="fw-bold text-dark mb-3 text-uppercase"><i class="bi bi-camera-video-fill text-danger me-2"></i>Optical Viewfinder</h5>
+                        <div class="scanner-container">
+                            <img id="feed" src="{{ url_for('web.video_feed') }}" class="scanner-feed" alt="Camera loading...">
+                            <div id="scan-line" class="scan-line"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="glass-panel">
+                        <h5 class="fw-bold text-dark mb-4 text-uppercase"><i class="bi bi-cpu-fill text-primary me-2"></i>System Console</h5>
+
+                        <div class="alert bg-white py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center" id="debug-log" style="font-weight: 600; color: #495057;">
+                            <i class="bi bi-info-circle-fill me-2 fs-5 text-secondary"></i> <span id="debug-text">Scanner Status: Stopped</span>
+                        </div>
+
+                        <div class="mb-4">
+                            <div id="stu-badge" class="badge-custom badge-danger mb-3">
+                                <i class="bi bi-person-x-fill me-2 fs-5"></i> STUDENT: NOT SCANNED
+                            </div>
+                            <div id="book-badge" class="badge-custom badge-secondary">
+                                <i class="bi bi-journal-x me-2 fs-5"></i> BOOK: WAITING
+                            </div>
+                        </div>
+
+                        <div class="flex-grow-1"></div>
+
+                        <div class="mt-auto">
+                            <div class="d-grid gap-2 mb-3">
+                                <button id="start-btn" class="btn btn-success-gradient btn-lg fw-bold shadow-sm" onclick="controlScanner('start')">
+                                    <i class="bi bi-play-fill me-1"></i> Start Scanner
+                                </button>
+                                <button id="stop-btn" class="btn btn-danger-gradient btn-lg fw-bold shadow-sm" onclick="controlScanner('stop')" disabled>
+                                    <i class="bi bi-stop-fill me-1"></i> Stop Scanner
+                                </button>
+                            </div>
+                            <button class="btn btn-dark-gradient w-100 fw-bold shadow-sm py-2" onclick="location.reload()">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reset Entire Page
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7);">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-arrow-left-right me-2"></i>Complete Transaction</h5>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <p class="text-muted fw-bold mb-1 text-uppercase letter-spacing-1">Detected Book ID</p>
+                    <h1 id="modal-book-id" class="text-dark fw-bold mb-4" style="font-family: monospace;">---</h1>
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-success btn-lg btn-modal py-3" onclick="finalProcess('Issue')">
+                            <i class="bi bi-box-arrow-up-right me-2"></i> ISSUE TO STUDENT
+                        </button>
+                        <button class="btn btn-warning btn-lg btn-modal py-3 text-dark" style="background: linear-gradient(135deg, #ffc107, #ffb300);" onclick="finalProcess('Return')">
+                            <i class="bi bi-box-arrow-in-down-left me-2"></i> RETURN BOOK
+                        </button>
+                    </div>
+                    <button class="btn btn-link mt-3 text-muted fw-bold text-decoration-none" onclick="closeModal()">Cancel & Scan Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="warningModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border border-warning border-3">
+                <div class="modal-header" style="background: linear-gradient(135deg, #ffc107, #ffb300);">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-exclamation-triangle-fill me-2"></i>Department Mismatch</h5>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <div class="mb-4">
+                        <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <p id="warning-msg" class="text-dark fw-bold mb-4" style="font-size: 1.1rem;"></p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-danger btn-lg btn-modal" onclick="finalProcess('Issue', true)">Issue Anyway (Override)</button>
+                        <button class="btn btn-secondary btn-lg btn-modal" onclick="closeWarningModal()">Cancel Transaction</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border border-danger border-3">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #b02a37);">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-cash-coin me-2"></i>Payment Required</h5>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <p class="text-muted fw-bold mb-1" id="pay-student-name">Student Name</p>
+                    <p class="text-dark fw-bold mb-3" id="pay-book-title">Book Title</p>
+
+                    <div class="bg-white p-3 rounded-3 shadow-sm border mb-4">
+                        <h5 class="text-danger fw-bold mb-1">Overdue by: <span id="pay-days-late"></span> Days</h5>
+                        <h1 class="text-danger fw-bold mb-0" style="font-size: 3.5rem;">₹<span id="pay-fine-amount"></span></h1>
+                    </div>
+
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-success btn-lg btn-modal py-3 fw-bold" onclick="processPayment('pay')">
+                            <i class="bi bi-check-circle-fill me-2"></i> Collect ₹<span id="btn-pay-amount"></span> & Return Book
+                        </button>
+                        <button class="btn btn-secondary btn-lg btn-modal py-2 fw-bold" onclick="processPayment('waive')">
+                            <i class="bi bi-shield-fill-x me-2"></i> Waive Fine & Return
+                        </button>
+                    </div>
+                    <button class="btn btn-link mt-3 text-muted fw-bold text-decoration-none" onclick="closePaymentModal()">Cancel Transaction</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addMoreModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border border-success border-3">
+                <div class="modal-header" style="background: linear-gradient(135deg, #198754, #146c43);">
+                    <h5 class="modal-title fw-bold text-white"><i class="bi bi-check-circle-fill me-2"></i>Transaction Successful</h5>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <div class="mb-3">
+                        <i class="bi bi-check2-circle text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <p id="success-msg" class="text-dark fw-bold mb-4" style="font-size: 1.1rem;"></p>
+
+                    <div class="bg-white p-3 rounded-3 shadow-sm border mb-4">
+                        <h6 class="fw-bold text-muted mb-0">Process another book for this student?</h6>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-lg btn-modal" onclick="keepScanning()">
+                            <i class="bi bi-upc-scan me-2"></i> Yes, Scan Another Book
+                        </button>
+                        <button class="btn btn-outline-secondary btn-lg btn-modal fw-bold" onclick="location.reload()">
+                            <i class="bi bi-person-plus-fill me-2"></i> No, Next Student
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="beep-sound" src="{{ url_for('static', filename='sound/beep.mp3') }}" preload="auto"></audio>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+        let savedStudentID = null;
+        let savedBookID = null;
+        let myModal = null;
+        let warningModal = null;
+        let paymentModal = null;
+        let addMoreModal = null;
+        let scanInterval = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                myModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                warningModal = new bootstrap.Modal(document.getElementById('warningModal'));
+                paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                addMoreModal = new bootstrap.Modal(document.getElementById('addMoreModal'));
+            } catch (e) {
+                console.error("Bootstrap Error:", e);
+            }
+        });
+
+        function controlScanner(action) {
+            fetch(`/toggle_camera/${action}`)
+                .then(res => res.json())
+                .then(data => {
+                    const debugLog = document.getElementById('debug-log');
+                    const scanLine = document.getElementById('scan-line');
+                    const startBtn = document.getElementById('start-btn');
+                    const stopBtn = document.getElementById('stop-btn');
+
+                    if (action === 'start') {
+                        debugLog.className = "alert py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center";
+                        debugLog.style.backgroundColor = "rgba(25, 135, 84, 0.1)";
+                        debugLog.style.borderColor = "#198754";
+                        debugLog.innerHTML = '<i class="bi bi-record-circle-fill text-danger me-2 fs-5" style="animation: pulse 1s infinite;"></i> <span class="text-success fw-bold">Scanner Active & Listening...</span>';
+                        scanLine.style.display = "block";
+                        startBtn.disabled = true;
+                        stopBtn.disabled = false;
+                        startPolling();
+                    } else {
+                        debugLog.className = "alert bg-white py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center";
+                        debugLog.style.borderColor = "#dee2e6";
+                        debugLog.innerHTML = '<i class="bi bi-info-circle-fill me-2 fs-5 text-secondary"></i> <span class="text-secondary fw-bold">Scanner Status: Stopped</span>';
+                        scanLine.style.display = "none";
+                        startBtn.disabled = false;
+                        stopBtn.disabled = true;
+                        clearInterval(scanInterval);
+                    }
+                });
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`;
+        document.head.appendChild(style);
+
+        function startPolling() {
+            clearInterval(scanInterval);
+
+            scanInterval = setInterval(function() {
+                fetch('/check_scan')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === "found") {
+                            if (data.type === "student") {
+                                if (savedStudentID !== data.id) {
+                                    const beep = document.getElementById('beep-sound');
+                                    beep.currentTime = 0;
+                                    beep.play().catch(err => console.log("Audio blocked"));
+
+                                    savedStudentID = data.id;
+                                    const stuBadge = document.getElementById('stu-badge');
+                                    stuBadge.className = "badge-custom badge-success mb-3";
+                                    stuBadge.innerHTML = `<i class="bi bi-person-check-fill me-2 fs-5"></i> STUDENT: ${savedStudentID}`;
+                                    setTimeout(() => { alert("Student Verified: " + savedStudentID); }, 100);
+                                }
+                            }
+                            else if (data.type === "book") {
+                                if (!savedStudentID) {
+                                    alert("Please scan Student QR first!");
+                                } else {
+                                    if (savedBookID !== data.id) {
+                                        const beep = document.getElementById('beep-sound');
+                                        beep.currentTime = 0;
+                                        beep.play().catch(err => console.log("Audio blocked"));
+
+                                        savedBookID = data.id;
+                                        document.getElementById('modal-book-id').innerText = savedBookID;
+
+                                        const bookBadge = document.getElementById('book-badge');
+                                        bookBadge.className = "badge-custom badge-primary";
+                                        bookBadge.innerHTML = `<i class="bi bi-journal-check me-2 fs-5"></i> BOOK: ${savedBookID}`;
+
+                                        if (myModal) myModal.show();
+                                    }
+                                }
+                            }
+                        }
+                    });
+            }, 1000);
+        }
+
+        function closeModal() {
+            if (myModal) myModal.hide();
+            resetBookUI();
+        }
+
+        function closeWarningModal() {
+            if (warningModal) warningModal.hide();
+            resetBookUI();
+        }
+
+        function closePaymentModal() {
+            if (paymentModal) paymentModal.hide();
+            resetBookUI();
+        }
+
+        function resetBookUI() {
+            savedBookID = null;
+            document.getElementById('book-badge').className = "badge-custom badge-secondary";
+            document.getElementById('book-badge').innerHTML = '<i class="bi bi-journal-x me-2 fs-5"></i> BOOK: WAITING';
+        }
+
+        function keepScanning() {
+            if (addMoreModal) addMoreModal.hide();
+            resetBookUI();
+        }
+
+        function processPayment(paymentAction) {
+            finalProcess('Return', false, paymentAction);
+        }
+
+        function finalProcess(actionType, forceIssue = false, fineStatus = null) {
+            if (!savedBookID || !savedStudentID) {
+                alert("Error: Missing Student or Book ID");
+                return;
+            }
+
+            fetch('/process_transaction', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    type: actionType,
+                    bid: savedBookID,
+                    sid: savedStudentID,
+                    force_issue: forceIssue,
+                    fine_status: fineStatus
+                })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (myModal) myModal.hide();
+                if (warningModal) warningModal.hide();
+                if (paymentModal) paymentModal.hide();
+
+                if (result.status === "warning") {
+                    document.getElementById('warning-msg').innerText = result.message;
+                    if (warningModal) warningModal.show();
+                }
+                else if (result.status === "payment_required") {
+                    document.getElementById('pay-student-name').innerText = "Student: " + result.student_name;
+                    document.getElementById('pay-book-title').innerText = "Returning: " + result.book_title;
+                    document.getElementById('pay-days-late').innerText = result.days_late;
+                    document.getElementById('pay-fine-amount').innerText = result.fine_amount;
+                    document.getElementById('btn-pay-amount').innerText = result.fine_amount;
+
+                    if (paymentModal) paymentModal.show();
+                }
+                else if (result.status === "success") {
+                    document.getElementById('success-msg').innerText = result.message;
+                    if (addMoreModal) addMoreModal.show();
+                }
+                else {
+                    alert(result.message);
+                    resetBookUI();
+                }
+            })
+            .catch(err => {
+                console.error("Transaction failed:", err);
+                alert("Server Error.");
+            });
+        }
+    </script>
+</body>
+</html>
