@@ -15,7 +15,9 @@ web_bp = Blueprint('web', __name__)
 
 @web_bp.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    # Disabled for cloud deployment (no physical webcam on cloud server)
+    # return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return 'Camera disabled on cloud server'
 
 @web_bp.route('/toggle_camera/<action>')
 def toggle_camera(action):
