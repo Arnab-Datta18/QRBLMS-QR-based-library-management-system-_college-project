@@ -683,9 +683,9 @@ def print_qrs():
     books = Book.query.all()
     students = Student.query.all()
 
-    qr_folder = current_app.config['QR_FOLDER']
-    valid_books = [b for b in books if os.path.exists(os.path.join(qr_folder, f"book_{b.id}.png"))]
-    valid_students = [s for s in students if os.path.exists(os.path.join(qr_folder, f"student_{s.id}.png"))]
+    qr_dir = os.path.join(current_app.root_path, 'static', 'qrcodes')
+    valid_books = [b for b in books if os.path.exists(os.path.join(qr_dir, f"book_{b.id}.png"))]
+    valid_students = [s for s in students if os.path.exists(os.path.join(qr_dir, f"student_{s.id}.png"))]
 
     return render_template('print_qrs.html', books=valid_books, students=valid_students)
 
