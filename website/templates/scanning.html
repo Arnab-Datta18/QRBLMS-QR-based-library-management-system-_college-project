@@ -64,7 +64,8 @@
             width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 15px; position: relative; overflow: hidden;
             border: 5px solid rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 30px rgba(0,0,0,1), 0 10px 20px rgba(0,0,0,0.15);
         }
-        .scanner-feed { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        #qr-reader { border: none !important; }
+        #qr-reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 12px; }
 
         .scan-line {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
@@ -137,10 +138,7 @@
                     <div class="glass-panel">
                         <h5 class="fw-bold text-dark mb-3 text-uppercase"><i class="bi bi-camera-video-fill text-danger me-2"></i>Optical Viewfinder</h5>
                         <div class="scanner-container">
-                            <!-- Camera disabled for cloud deployment:
-                            <img id="feed" src="{{ url_for('web.video_feed') }}" class="scanner-feed" alt="Camera loading...">
-                            -->
-                            <div id="scan-line" class="scan-line"></div>
+                            <div id="qr-reader" style="width: 100%; border-radius: 12px; overflow: hidden;"></div>
                         </div>
                     </div>
                 </div>
@@ -154,7 +152,7 @@
                         </div>
 
                         <div class="mb-4">
-                            <div id="stu-badge" class="badge-custom badge-danger mb-3">
+                            <div id="student-badge" class="badge-custom badge-danger mb-3">
                                 <i class="bi bi-person-x-fill me-2 fs-5"></i> STUDENT: NOT SCANNED
                             </div>
                             <div id="book-badge" class="badge-custom badge-secondary">
@@ -286,14 +284,19 @@
 
     <audio id="beep-sound" src="{{ url_for('static', filename='sound/beep.mp3') }}" preload="auto"></audio>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
         let savedStudentID = null;
         let savedBookID = null;
         let myModal = null;
         let warningModal = null;
         let paymentModal = null;
         let addMoreModal = null;
-        let scanInterval = null;
+        let lastAlertTime = 0;
+        let isCameraRunning = false;
+
+        const html5QrCode = new Html5Qrcode("qr-reader");
+        let isScanningPaused = false;
 
         document.addEventListener("DOMContentLoaded", function() {
             try {
@@ -304,112 +307,165 @@
             } catch (e) {
                 console.error("Bootstrap Error:", e);
             }
+            startCamera();
         });
 
-        function controlScanner(action) {
-            fetch(`/toggle_camera/${action}`)
-                .then(res => res.json())
-                .then(data => {
-                    const debugLog = document.getElementById('debug-log');
-                    const scanLine = document.getElementById('scan-line');
-                    const startBtn = document.getElementById('start-btn');
-                    const stopBtn = document.getElementById('stop-btn');
+        function updateScannerStatus(active, message) {
+            const debugLog = document.getElementById('debug-log');
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
 
-                    if (action === 'start') {
-                        debugLog.className = "alert py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center";
-                        debugLog.style.backgroundColor = "rgba(25, 135, 84, 0.1)";
-                        debugLog.style.borderColor = "#198754";
-                        debugLog.innerHTML = '<i class="bi bi-record-circle-fill text-danger me-2 fs-5" style="animation: pulse 1s infinite;"></i> <span class="text-success fw-bold">Scanner Active & Listening...</span>';
-                        scanLine.style.display = "block";
-                        startBtn.disabled = true;
-                        stopBtn.disabled = false;
-                        startPolling();
-                    } else {
-                        debugLog.className = "alert bg-white py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center";
-                        debugLog.style.borderColor = "#dee2e6";
-                        debugLog.innerHTML = '<i class="bi bi-info-circle-fill me-2 fs-5 text-secondary"></i> <span class="text-secondary fw-bold">Scanner Status: Stopped</span>';
-                        scanLine.style.display = "none";
-                        startBtn.disabled = false;
-                        stopBtn.disabled = true;
-                        clearInterval(scanInterval);
-                    }
-                });
+            if (active) {
+                if (debugLog) {
+                    debugLog.className = "alert py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center";
+                    debugLog.style.backgroundColor = "rgba(25, 135, 84, 0.1)";
+                    debugLog.style.borderColor = "#198754";
+                    debugLog.innerHTML = '<i class="bi bi-record-circle-fill text-danger me-2 fs-5" style="animation: pulse 1s infinite;"></i> <span class="text-success fw-bold">' + (message || 'Scanner Active & Listening...') + '</span>';
+                }
+                if (startBtn) startBtn.disabled = true;
+                if (stopBtn) stopBtn.disabled = false;
+            } else {
+                if (debugLog) {
+                    debugLog.className = "alert bg-white py-3 shadow-sm border rounded-3 mb-4 d-flex align-items-center";
+                    debugLog.style.borderColor = "#dee2e6";
+                    debugLog.innerHTML = '<i class="bi bi-info-circle-fill me-2 fs-5 text-secondary"></i> <span class="text-secondary fw-bold">' + (message || 'Scanner Status: Stopped') + '</span>';
+                }
+                if (startBtn) startBtn.disabled = false;
+                if (stopBtn) stopBtn.disabled = true;
+            }
         }
 
         const style = document.createElement('style');
         style.innerHTML = `@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }`;
         document.head.appendChild(style);
 
-        function startPolling() {
-            clearInterval(scanInterval);
+        function startCamera() {
+            if (isCameraRunning) return;
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess
+            ).then(() => {
+                isCameraRunning = true;
+                updateScannerStatus(true, "Scanner Active & Listening...");
+            }).catch(err => {
+                console.warn("Unable to start environment camera, attempting user-facing camera:", err);
+                html5QrCode.start(
+                    { facingMode: "user" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    onScanSuccess
+                ).then(() => {
+                    isCameraRunning = true;
+                    updateScannerStatus(true, "Scanner Active & Listening...");
+                }).catch(fallbackErr => {
+                    console.error("Camera start failed:", fallbackErr);
+                    updateScannerStatus(false, "Camera Access Error / Permission Denied");
+                });
+            });
+        }
 
-            scanInterval = setInterval(function() {
-                fetch('/check_scan')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === "found") {
-                            if (data.type === "student") {
-                                if (savedStudentID !== data.id) {
-                                    const beep = document.getElementById('beep-sound');
-                                    beep.currentTime = 0;
-                                    beep.play().catch(err => console.log("Audio blocked"));
+        function stopCamera() {
+            if (!isCameraRunning) return;
+            html5QrCode.stop().then(() => {
+                isCameraRunning = false;
+                updateScannerStatus(false, "Scanner Status: Stopped");
+            }).catch(err => {
+                console.error("Failed to stop camera:", err);
+            });
+        }
 
-                                    savedStudentID = data.id;
-                                    const stuBadge = document.getElementById('stu-badge');
-                                    stuBadge.className = "badge-custom badge-success mb-3";
-                                    stuBadge.innerHTML = `<i class="bi bi-person-check-fill me-2 fs-5"></i> STUDENT: ${savedStudentID}`;
-                                    setTimeout(() => { alert("Student Verified: " + savedStudentID); }, 100);
-                                }
-                            }
-                            else if (data.type === "book") {
-                                if (!savedStudentID) {
-                                    alert("Please scan Student QR first!");
-                                } else {
-                                    if (savedBookID !== data.id) {
-                                        const beep = document.getElementById('beep-sound');
-                                        beep.currentTime = 0;
-                                        beep.play().catch(err => console.log("Audio blocked"));
+        function controlScanner(action) {
+            if (action === 'start') {
+                startCamera();
+            } else {
+                stopCamera();
+            }
+        }
 
-                                        savedBookID = data.id;
-                                        document.getElementById('modal-book-id').innerText = savedBookID;
+        function onScanSuccess(decodedText) {
+            if (isScanningPaused || !decodedText) return;
+            decodedText = decodedText.trim();
 
-                                        const bookBadge = document.getElementById('book-badge');
-                                        bookBadge.className = "badge-custom badge-primary";
-                                        bookBadge.innerHTML = `<i class="bi bi-journal-check me-2 fs-5"></i> BOOK: ${savedBookID}`;
+            if (decodedText.startsWith("STUDENT:")) {
+                const studentId = decodedText.replace("STUDENT:", "").trim();
+                if (savedStudentID === studentId) return;
 
-                                        if (myModal) myModal.show();
-                                    }
-                                }
-                            }
-                        }
-                    });
-            }, 1000);
+                savedStudentID = studentId;
+
+                const beep = document.getElementById('beep-sound');
+                if (beep) {
+                    beep.currentTime = 0;
+                    beep.play().catch(() => {});
+                }
+
+                const stuBadge = document.getElementById('student-badge') || document.getElementById('stu-badge');
+                if (stuBadge) {
+                    stuBadge.className = "badge-custom badge-success mb-3";
+                    stuBadge.innerHTML = `<i class="bi bi-person-check-fill me-2 fs-5"></i> STUDENT: ${savedStudentID}`;
+                }
+            } else if (decodedText.startsWith("BOOK:")) {
+                if (!savedStudentID) {
+                    if (Date.now() - lastAlertTime > 2000) {
+                        lastAlertTime = Date.now();
+                        alert("Please scan Student ID first!");
+                    }
+                    return;
+                }
+
+                savedBookID = decodedText.replace("BOOK:", "").trim();
+                isScanningPaused = true;
+
+                const beep = document.getElementById('beep-sound');
+                if (beep) {
+                    beep.currentTime = 0;
+                    beep.play().catch(() => {});
+                }
+
+                const modalBookId = document.getElementById('modal-book-id');
+                if (modalBookId) modalBookId.innerText = savedBookID;
+
+                const bookBadge = document.getElementById('book-badge');
+                if (bookBadge) {
+                    bookBadge.className = "badge-custom badge-primary";
+                    bookBadge.innerHTML = `<i class="bi bi-journal-check me-2 fs-5"></i> BOOK: ${savedBookID}`;
+                }
+
+                if (myModal) myModal.show();
+            }
         }
 
         function closeModal() {
             if (myModal) myModal.hide();
+            isScanningPaused = false;
             resetBookUI();
         }
 
         function closeWarningModal() {
             if (warningModal) warningModal.hide();
+            isScanningPaused = false;
             resetBookUI();
         }
 
         function closePaymentModal() {
             if (paymentModal) paymentModal.hide();
+            isScanningPaused = false;
             resetBookUI();
         }
 
         function resetBookUI() {
             savedBookID = null;
-            document.getElementById('book-badge').className = "badge-custom badge-secondary";
-            document.getElementById('book-badge').innerHTML = '<i class="bi bi-journal-x me-2 fs-5"></i> BOOK: WAITING';
+            isScanningPaused = false;
+            const bookBadge = document.getElementById('book-badge');
+            if (bookBadge) {
+                bookBadge.className = "badge-custom badge-secondary";
+                bookBadge.innerHTML = '<i class="bi bi-journal-x me-2 fs-5"></i> BOOK: WAITING';
+            }
         }
 
         function keepScanning() {
             if (addMoreModal) addMoreModal.hide();
             resetBookUI();
+            isScanningPaused = false;
         }
 
         function processPayment(paymentAction) {
