@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
 from models import db, Librarian
@@ -12,6 +13,7 @@ load_dotenv()
 
 def create_app():
     app = Flask(__name__)
+    CORS(app, resources={r"/*": {"origins": "*"}})
     
     # Configure app from environment variables
     app.secret_key = os.getenv("FLASK_SECRET_KEY", "final_project_key")
