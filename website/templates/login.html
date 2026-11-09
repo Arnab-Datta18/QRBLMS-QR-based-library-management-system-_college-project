@@ -16,15 +16,56 @@
         }
 
         body, .background {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 50%, #d8e0e8 100%);
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-color: #f8fafc;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
             margin: 0;
-            overflow-x: hidden;
-            position: relative;
             padding: 20px;
+        }
+
+        /* --- AMBIENT AURORA GLOW ORBS --- */
+        .ambient-orb {
+            pointer-events: none;
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.45;
+            will-change: transform;
+        }
+
+        .orb-1 {
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle, rgba(218, 41, 28, 0.5) 0%, rgba(218, 41, 28, 0) 70%);
+            top: -100px;
+            left: -100px;
+            animation: floatGlow 9s ease-in-out infinite alternate;
+        }
+
+        .orb-2 {
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(30, 41, 59, 0.35) 0%, rgba(30, 41, 59, 0) 70%);
+            bottom: -120px;
+            right: -100px;
+            animation: floatGlow 10s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes floatGlow {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(18px, 15px) scale(1.04);
+            }
+            100% {
+                transform: translate(-15px, -18px) scale(0.97);
+            }
         }
 
         /* --- TOAST NOTIFICATIONS --- */
@@ -231,19 +272,20 @@
             transform: scale(0.95);
         }
 
-        /* --- THE MAIN LOGIN CONTAINER --- */
+        /* --- THE MAIN LOGIN CONTAINER (GLASSMORPHISM CARD) --- */
         .login-container {
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 25px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 10px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
             position: relative;
             overflow: hidden;
             width: 850px;
             max-width: 100%;
             min-height: 550px;
+            z-index: 10;
         }
 
         .form-container {
@@ -378,7 +420,25 @@
                 height: auto;
                 min-height: 100vh;
                 padding: 24px 12px;
+                overflow-x: hidden;
                 overflow-y: auto;
+            }
+
+            /* Proportionally resized orbs for mobile screen safety */
+            .ambient-orb.orb-1 {
+                width: 260px;
+                height: 260px;
+                top: -60px;
+                left: -60px;
+                filter: blur(60px);
+            }
+
+            .ambient-orb.orb-2 {
+                width: 280px;
+                height: 280px;
+                bottom: -70px;
+                right: -60px;
+                filter: blur(60px);
             }
 
             .login-container {
@@ -528,6 +588,10 @@
     </style>
 </head>
 <body class="background">
+
+    <!-- Ambient Aurora Glow Decorative Orbs -->
+    <div class="ambient-orb orb-1" aria-hidden="true"></div>
+    <div class="ambient-orb orb-2" aria-hidden="true"></div>
 
     <!-- Toast Notifications Container -->
     <div class="toast-container" id="toastContainer">
