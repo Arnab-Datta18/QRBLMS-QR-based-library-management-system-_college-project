@@ -15,17 +15,20 @@
             font-family: 'Poppins', sans-serif;
         }
 
-        body {
-            /* Upgraded to the energetic gradient */
-            background: linear-gradient(135deg, #e0e5ec 0%, #f8f9fa 100%);
+        html, body {
+            overflow-x: hidden;
+            min-height: 100dvh;
+            width: 100%;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
-            min-height: 100vh;
         }
-        /* --- SIGN OUT BUTTON FIX --- */
-        .logout-link { color: #DA291C !important; font-weight: 600; }
-        .logout-link:hover { color: #ffffff !important; }
+
+        body {
+            background: linear-gradient(135deg, #e0e5ec 0%, #f8f9fa 100%);
+            position: relative;
+            min-height: 100dvh;
+        }
+
         /* --- ENERGETIC 3D FLOATING BACKGROUND ORBS --- */
         .bg-shape {
             position: fixed;
@@ -33,6 +36,7 @@
             z-index: -1;
             opacity: 0.4;
             animation: float 12s infinite ease-in-out alternate;
+            pointer-events: none;
         }
         .bg-shape-1 {
             width: 500px; height: 500px;
@@ -52,87 +56,236 @@
             100% { transform: translateY(50px) scale(1.05); }
         }
 
-        /* --- SIDEBAR --- */
-        .dashboard-container { display: flex; min-height: 100vh; }
+        /* --- LAYOUT: SIDEBAR & MAIN CONTENT --- */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            min-height: 100dvh;
+            width: 100%;
+            position: relative;
+        }
 
+        /* --- TASK 2: SIDEBAR & FIXED SIGN OUT --- */
         .sidebar {
             width: 260px;
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             color: #212529;
-            padding: 30px 20px;
+            padding: 30px 20px 20px 20px;
             position: fixed;
+            top: 0;
+            left: 0;
             height: 100vh;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto;
+            padding-bottom: 20px;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.05);
             z-index: 100;
+            transition: transform 0.3s ease-in-out;
         }
 
         .sidebar-logo {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 35px;
+            position: relative;
         }
         .sidebar-logo img {
             width: 100px;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
         }
 
+        /* --- TASK 4: UNIFORM SIDEBAR NAVIGATION STYLING --- */
         .nav-link {
             color: #495057;
             font-weight: 500;
-            padding: 12px 20px;
+            padding: 10px 16px;
             border-radius: 10px;
-            margin-bottom: 5px;
-            transition: all 0.3s;
+            margin-bottom: 6px;
+            transition: all 0.2s ease-in-out;
             display: flex;
             align-items: center;
             gap: 10px;
             text-decoration: none;
         }
-        .nav-link:hover, .nav-link.active {
-            color: #fff;
-            background: linear-gradient(135deg, #DA291C, #b51f15);
-            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.3);
-            transform: translateX(5px);
+        .nav-link:hover {
+            color: #DA291C;
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .nav-link.active {
+            color: #ffffff !important;
+            background-color: #DA291C !important;
+            background: #DA291C !important;
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.2) !important;
+            transform: none;
+        }
+        .nav-link.active:hover {
+            color: #ffffff !important;
+            background-color: #DA291C !important;
         }
 
+        .sidebar-footer {
+            margin-top: auto;
+            flex-shrink: 0;
+            width: 100%;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .logout-link {
+            color: #DA291C !important;
+            font-weight: 600;
+            margin-bottom: 0;
+            padding: 10px 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease-in-out;
+        }
+        .logout-link:hover {
+            color: #b51f15 !important;
+            background-color: rgba(218, 41, 28, 0.08) !important;
+        }
+
+        /* --- MOBILE TOP BAR & BACKDROP --- */
+        .mobile-topbar {
+            display: none;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding: 10px 16px;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
+        /* --- MAIN CONTENT & PANELS --- */
         .main-content {
             flex: 1;
             margin-left: 260px;
             padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            min-height: 100dvh;
         }
 
-        /* --- GLASS PANELS --- */
         .glass-panel {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
             padding: 25px;
         }
 
-        /* --- DOCUMENT CARDS (FOR STUDENTS) --- */
+        /* --- TASK 3: RESPONSIVE CSS GRID FOR DOCUMENTS --- */
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 340px));
+            gap: 20px;
+            width: 100%;
+        }
+
         .doc-card {
             background: #fff;
-            border-radius: 15px;
+            border-radius: 14px;
             padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            border-top: 5px solid #212529;
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-left: 5px solid #DA291C;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             height: 100%;
         }
         .doc-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 25px rgba(0,0,0,0.1);
-            border-top-color: #DA291C;
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(218, 41, 28, 0.12), 0 4px 8px rgba(0, 0, 0, 0.04);
+            border-left-color: #b51f15;
         }
         .doc-icon {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             color: #DA291C;
+        }
+
+        /* Filename heading with natural wrapping */
+        .doc-filename {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        /* Action button row */
+        .doc-actions {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: auto;
+        }
+        .doc-actions .btn {
+            flex: 1;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 12px;
+        }
+
+        /* Task 4: Standardize Download and View Button Styling */
+        .btn-download {
+            background-color: #DA291C !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 10px !important;
+            box-shadow: 0 2px 6px rgba(218, 41, 28, 0.25);
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+        .btn-download:hover {
+            background-color: #b51f15 !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.35);
+        }
+        .btn-view {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+        .btn-view:hover {
+            background-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            border-color: #94a3b8 !important;
+            transform: translateY(-2px);
         }
 
         /* --- CUSTOM TABLES (FOR LIBRARIAN) --- */
@@ -153,12 +306,12 @@
         }
         .table-custom tbody tr {
             background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         .table-custom tbody tr:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
         }
         .table-custom td {
             padding: 12px 10px;
@@ -169,6 +322,18 @@
         }
         .table-custom td:first-child { border-radius: 10px 0 0 10px; }
         .table-custom td:last-child { border-radius: 0 10px 10px 0; }
+
+        .btn-action {
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 0.80rem;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
 
         /* Inputs & Buttons */
         input.form-control, select.form-select {
@@ -204,16 +369,51 @@
             color: white;
         }
 
-        .btn-action {
-            border-radius: 8px;
-            padding: 5px 10px;
-            font-size: 0.80rem;
-            font-weight: 600;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: all 0.2s;
+        /* --- RESPONSIVE BREAKPOINTS --- */
+        @media (min-width: 769px) {
+            .mobile-topbar {
+                display: none !important;
+            }
+            .sidebar-backdrop {
+                display: none !important;
+            }
+            .sidebar {
+                transform: none !important;
+            }
+            .main-content {
+                margin-left: 260px;
+                padding: 40px;
+                width: calc(100% - 260px);
+            }
         }
-        .btn-action:hover {
-            transform: translateY(-2px);
+
+        @media (max-width: 768px) {
+            .mobile-topbar {
+                display: flex !important;
+            }
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1050;
+                box-shadow: 8px 0 25px rgba(0, 0, 0, 0.15);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                width: 100%;
+                margin-left: 0;
+                padding: 16px;
+            }
+            .glass-panel {
+                padding: 20px 16px;
+                margin-bottom: 20px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .documents-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -222,29 +422,62 @@
     <div class="bg-shape bg-shape-1"></div>
     <div class="bg-shape bg-shape-2"></div>
 
+    <!-- Mobile Top Bar (<= 768px only) -->
+    <header class="mobile-topbar align-items-center justify-content-between shadow-sm">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-link text-dark p-0 border-0 fs-2 lh-1" id="mobileMenuToggle" aria-label="Toggle Navigation">
+                <i class="bi bi-list"></i>
+            </button>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" style="height: 32px;" onerror="this.style.display='none'">
+            <span class="fw-bold fs-6 text-dark tracking-wider mb-0">TCEA LIBRARY</span>
+        </div>
+        <div>
+            {% if student %}
+            <a href="{{ url_for('web.stu_dash') }}" class="text-decoration-none">
+                <img src="{% if student.profile_pic_url %}{% if student.profile_pic_url.startswith('/static/') %}{{ student.profile_pic_url }}{% else %}{{ url_for('static', filename='uploads/' ~ student.profile_pic_url) }}{% endif %}{% else %}https://ui-avatars.com/api/?name={{ student.name | urlencode }}&background=DA291C&color=fff{% endif %}" 
+                     alt="Profile" class="profile-icon-header shadow-sm" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+            </a>
+            {% elif session['role'] == 'librarian' %}
+            <a href="{{ url_for('web.lib_dash') }}" class="text-decoration-none">
+                <span class="badge bg-dark rounded-pill px-3 py-2"><i class="bi bi-person-badge-fill me-1"></i> Librarian</span>
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Sidebar Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <div class="dashboard-container">
 
-        <div class="sidebar">
-            <div class="sidebar-logo">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
-                <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+        <!-- Sidebar Navigation Drawer -->
+        <div class="sidebar" id="sidebarNav">
+            <div class="sidebar-top">
+                <div class="sidebar-logo">
+                    <button type="button" class="btn btn-sm btn-link text-muted d-md-none position-absolute top-0 end-0 p-0 text-decoration-none fs-4 lh-1" id="sidebarCloseBtn" aria-label="Close Sidebar">&times;</button>
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
+                    <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+                </div>
+
+                <nav class="sidebar-nav">
+                    {% if session['role'] == 'librarian' %}
+                        <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Main</p>
+                        <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                        <a href="{{ url_for('web.registration') }}" class="nav-link"><i class="bi bi-person-plus-fill"></i> Registration</a>
+                        <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
+                        <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Manage</p>
+                        <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam-fill"></i> Inventory</a>
+                        <a href="{{ url_for('web.papers_page') }}" class="nav-link active"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
+                        <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
+                    {% else %}
+                        <a href="{{ url_for('web.stu_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                        <a href="{{ url_for('web.papers_page') }}" class="nav-link active"><i class="bi bi-cloud-arrow-down-fill"></i> Download Papers</a>
+                    {% endif %}
+                </nav>
             </div>
 
-            {% if session['role'] == 'librarian' %}
-                <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Main</p>
-                <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-                <a href="{{ url_for('web.registration') }}" class="nav-link"><i class="bi bi-person-plus-fill"></i> Registration</a>
-                <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
-            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Manage</p>
-                <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam-fill"></i> Inventory</a>
-                <a href="{{ url_for('web.papers_page') }}" class="nav-link active"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
-                <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
-            {% else %}
-                <a href="{{ url_for('web.stu_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-                <a href="{{ url_for('web.papers_page') }}" class="nav-link active"><i class="bi bi-cloud-arrow-down-fill"></i> Download Papers</a>
-            {% endif %}
-
-            <div style="position: absolute; bottom: 30px; width: calc(100% - 40px);">
+            <!-- Reliable Footer with Sign Out -->
+            <div class="sidebar-footer">
                 <a href="{{ url_for('auth.logout') }}" class="nav-link logout-link"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
             </div>
         </div>
@@ -265,14 +498,15 @@
                 {% endwith %}
             </div>
 
+            <!-- Task 4: H1 Digital Archives -->
             <div class="mb-4">
-                <h2 class="fw-bold" style="color: #212529;">Digital Archives</h2>
+                <h1 class="fw-bold mb-1" style="font-size: 1.75rem;">Digital Archives</h1>
                 <p class="text-muted fs-6">Access previous years' question papers and study materials.</p>
             </div>
 
             {% if session['role'] == 'librarian' %}
             <div class="glass-panel mb-5">
-                <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload New Document</h6>
+                <h2 class="h6 fw-bold mb-3 text-danger"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload New Document</h2>
                 <form action="{{ url_for('web.upload_paper') }}" method="POST" enctype="multipart/form-data">
                     <div class="row g-3 align-items-center">
 
@@ -307,7 +541,8 @@
             {% endif %}
 
             <div class="glass-panel">
-                <h5 class="fw-bold mb-4" style="color: #212529;"><i class="bi bi-file-earmark-text-fill text-danger me-2"></i>Available Documents</h5>
+                <!-- Task 4: H2 Available Documents -->
+                <h2 class="h5 fw-bold mb-4" style="color: #212529;"><i class="bi bi-file-earmark-text-fill text-danger me-2"></i>Available Documents</h2>
 
                 {% if not papers %}
                 <div class="alert bg-white text-muted shadow-sm border-0 rounded-3 mb-0">
@@ -340,10 +575,10 @@
 
                                     <td class="text-end">
                                         <div class="d-flex justify-content-end gap-2">
-                                            <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" target="_blank" class="btn btn-primary btn-action">
+                                            <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" target="_blank" class="btn btn-view btn-action">
                                                 <i class="bi bi-eye-fill"></i> View
                                             </a>
-                                            <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" download class="btn btn-success btn-action">
+                                            <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" download class="btn btn-download btn-action">
                                                 <i class="bi bi-download"></i> Download
                                             </a>
                                             <a href="{{ url_for('web.delete_paper', paper_id=p.id) }}" class="btn btn-danger btn-action" onclick="return confirm('Delete this paper?');">
@@ -358,29 +593,28 @@
                     </div>
 
                     {% else %}
-                    <div class="row g-4">
+                    <!-- Task 3: Responsive CSS Grid & Proper Card Wrap -->
+                    <div class="documents-grid">
                         {% for p in papers %}
-                        <div class="col-md-4">
-                            <div class="doc-card">
-                                <div>
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <i class="bi bi-file-earmark-pdf-fill doc-icon"></i>
-                                        <div class="text-end">
-                                            <span class="badge bg-secondary mb-1">{{ p.course }}</span><br>
-                                            <span class="badge bg-dark">{{ p.dept }} - Sem {{ p.semester }}</span>
-                                        </div>
+                        <div class="doc-card">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <i class="bi bi-file-earmark-pdf-fill doc-icon"></i>
+                                    <div class="text-end">
+                                        <span class="badge bg-secondary mb-1">{{ p.course }}</span><br>
+                                        <span class="badge bg-dark">{{ p.dept }} - Sem {{ p.semester }}</span>
                                     </div>
-                                    <h6 class="fw-bold text-dark text-break">{{ p.filename }}</h6>
                                 </div>
+                                <h3 class="h6 fw-bold text-dark mb-3 doc-filename" style="overflow-wrap: anywhere; word-break: break-word; line-height: 1.4;">{{ p.filename }}</h3>
+                            </div>
 
-                                <div class="mt-4 d-flex gap-2">
-                                    <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" target="_blank" class="btn btn-primary flex-fill fw-bold shadow-sm" style="border-radius: 8px;">
-                                        <i class="bi bi-eye-fill me-1"></i> View
-                                    </a>
-                                    <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" download class="btn btn-success flex-fill fw-bold shadow-sm" style="border-radius: 8px;">
-                                        <i class="bi bi-download me-1"></i> Download
-                                    </a>
-                                </div>
+                            <div class="doc-actions mt-auto" style="display: flex; gap: 10px; width: 100%;">
+                                <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" target="_blank" class="btn btn-view" style="flex: 1; white-space: nowrap;">
+                                    <i class="bi bi-eye-fill me-1"></i> View
+                                </a>
+                                <a href="{{ url_for('static', filename='uploads/' ~ p.filename) }}" download class="btn btn-download" style="flex: 1; white-space: nowrap;">
+                                    <i class="bi bi-download me-1"></i> Download
+                                </a>
                             </div>
                         </div>
                         {% endfor %}
@@ -431,6 +665,45 @@
                             semSelect.appendChild(new Option(i, i));
                         }
                     }
+                });
+            }
+
+            // Mobile Sidebar drawer toggle
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+            const sidebarNav = document.getElementById('sidebarNav');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+            function openSidebar() {
+                if (sidebarNav) sidebarNav.classList.add('show');
+                if (sidebarBackdrop) sidebarBackdrop.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebarNav) sidebarNav.classList.remove('show');
+                if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', openSidebar);
+            }
+            if (sidebarCloseBtn) {
+                sidebarCloseBtn.addEventListener('click', closeSidebar);
+            }
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', closeSidebar);
+            }
+
+            // Close sidebar when clicking any nav item on mobile
+            if (sidebarNav) {
+                sidebarNav.querySelectorAll('.nav-link').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            closeSidebar();
+                        }
+                    });
                 });
             }
         });
