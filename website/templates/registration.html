@@ -15,17 +15,21 @@
             font-family: 'Poppins', sans-serif;
         }
 
-        body {
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
-            min-height: 100vh;
-            background-color: #212529;
         }
-        /* --- SIGN OUT BUTTON FIX --- */
-        .logout-link { color: #DA291C !important; font-weight: 600; }
-        .logout-link:hover { color: #ffffff !important; }
-        /* --- FULL SCREEN BLURRED COLLEGE BACKGROUND --- */
+
+        body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            background-color: #212529;
+            position: relative;
+        }
+
+        /* --- FULL SCREEN BLURRED COLLEGE BACKGROUND (PRESERVED PER CRITICAL RULE) --- */
         .app-background {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-image: url("{{ url_for('static', filename='college.jpg') }}");
@@ -33,68 +37,177 @@
             filter: blur(6px) brightness(0.9); z-index: -10; transform: scale(1.1);
         }
 
-        /* --- SIDEBAR --- */
-        .dashboard-container { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+        /* --- LAYOUT: SIDEBAR & MAIN CONTENT --- */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            min-height: 100dvh;
+            position: relative;
+            width: 100%;
+        }
 
+        /* --- TASK 1 & SIDEBAR STYLING --- */
         .sidebar {
             width: 260px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             color: #212529;
-            padding: 30px 20px;
+            padding: 30px 20px 20px 20px;
             position: fixed;
+            top: 0;
+            left: 0;
             height: 100vh;
-            box-shadow: 4px 0 25px rgba(0,0,0,0.15);
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto;
+            padding-bottom: 20px;
+            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
             z-index: 100;
+            transition: transform 0.3s ease-in-out;
         }
 
-        .sidebar-logo { text-align: center; margin-bottom: 40px; }
-        .sidebar-logo img { width: 100px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        .sidebar-logo {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .sidebar-logo img {
+            width: 100px;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+        }
+
+        .sidebar-heading {
+            font-size: 0.85rem;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: #6c757d;
+        }
 
         .nav-link {
-            color: #495057; font-weight: 500; padding: 12px 20px; border-radius: 10px;
-            margin-bottom: 5px; transition: all 0.3s; display: flex; align-items: center; gap: 10px; text-decoration: none;
+            color: #495057;
+            font-weight: 500;
+            padding: 10px 16px;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
         }
-        .nav-link:hover, .nav-link.active {
-            color: #fff; background: linear-gradient(135deg, #DA291C, #b51f15);
-            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.3); transform: translateX(5px);
+        .nav-link:hover {
+            color: #DA291C;
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .nav-link.active {
+            color: #ffffff !important;
+            background-color: #DA291C !important;
+            background: #DA291C !important;
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.2) !important;
+            transform: none;
+        }
+        .nav-link.active:hover {
+            color: #ffffff !important;
+            background-color: #DA291C !important;
         }
 
+        .sidebar-footer {
+            margin-top: auto;
+            flex-shrink: 0;
+            width: 100%;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .logout-link {
+            color: #DA291C !important;
+            font-weight: 600;
+            margin-bottom: 0;
+            padding: 10px 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease-in-out;
+        }
+        .logout-link:hover {
+            color: #b51f15 !important;
+            background-color: rgba(218, 41, 28, 0.08) !important;
+        }
+
+        /* --- MOBILE TOP BAR & BACKDROP --- */
+        .mobile-topbar {
+            display: none;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding: 10px 16px;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
+        /* --- MAIN CONTENT --- */
         .main-content {
-            flex: 1; margin-left: 260px; padding: 40px;
+            flex: 1;
+            margin-left: 260px;
+            padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            min-height: 100dvh;
         }
 
         /* Header Elements */
         .header-title { color: #ffffff !important; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
         .header-subtitle { color: #f8f9fa !important; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 
-        /* --- GLASS PANELS --- */
+        /* --- GLASS PANELS (Standardized 16px radius) --- */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-            padding: 35px;
+            padding: 30px 25px;
             height: 100%;
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease;
+            transition: transform 0.25s ease;
         }
         .glass-panel:hover {
-            transform: translateY(-5px);
+            transform: translateY(-3px);
         }
 
-        .glass-panel-compact { padding: 25px 25px; }
+        .glass-panel-compact { padding: 25px 22px; }
 
-        /* --- FORM INPUTS & SELECTS --- */
+        /* --- FORM INPUTS & SELECTS (Standardized 12px radius) --- */
         input.form-control, select.form-select {
-            background-color: rgba(255, 255, 255, 0.9);
-            border: 2px solid rgba(0,0,0,0.05);
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 2px solid rgba(0,0,0,0.06);
             padding: 12px 15px;
-            border-radius: 10px;
+            border-radius: 12px;
             transition: all 0.3s ease;
             font-size: 0.95rem;
             color: #495057;
@@ -107,29 +220,55 @@
             outline: none;
         }
 
-        /* --- BUTTONS --- */
-        .btn-tcea-primary {
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; box-shadow: 0 6px 15px rgba(13, 110, 253, 0.3);
+        /* --- TASK 4: STANDARDIZED ACTION BUTTONS (12px radius) --- */
+        /* Primary TCEA Crimson Button for QR Generation */
+        .btn-crimson {
+            background: linear-gradient(135deg, #DA291C, #b51f15);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(218, 41, 28, 0.3);
         }
-        .btn-tcea-primary:hover { transform: translateY(-3px); color: white; box-shadow: 0 10px 20px rgba(13, 110, 253, 0.4); }
-
-        .btn-tcea-success {
-            background: linear-gradient(135deg, #198754, #146c43); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; box-shadow: 0 6px 15px rgba(25, 135, 84, 0.3);
+        .btn-crimson:hover {
+            transform: translateY(-2px);
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(218, 41, 28, 0.4);
         }
-        .btn-tcea-success:hover { transform: translateY(-3px); color: white; box-shadow: 0 10px 20px rgba(25, 135, 84, 0.4); }
 
-        .btn-tcea-secondary {
-            background: linear-gradient(135deg, #343a40, #212529); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; box-shadow: 0 6px 15px rgba(33, 37, 41, 0.3);
+        /* Dark Slate Button for Bulk Upload & Actions */
+        .btn-slate {
+            background-color: #1e293b;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25);
         }
-        .btn-tcea-secondary:hover { transform: translateY(-3px); color: white; box-shadow: 0 10px 20px rgba(33, 37, 41, 0.4); }
+        .btn-slate:hover {
+            background-color: #0f172a;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(30, 41, 59, 0.35);
+        }
 
-        /* --- QR PREVIEW BADGE --- */
+        /* --- TASK 4: CLEAN QR PREVIEW CONTAINER (Removed red top border, 16px radius) --- */
         .qr-badge-container {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            border-top: 6px solid #DA291C;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -137,39 +276,110 @@
             align-items: center;
         }
         .qr-image {
-            width: 160px; height: 160px; object-fit: contain; border: 2px dashed #ced4da; border-radius: 15px; padding: 10px; margin-bottom: 15px; background: white;
+            width: 160px; height: 160px; object-fit: contain; border: 2px dashed #ced4da; border-radius: 12px; padding: 10px; margin-bottom: 15px; background: white;
         }
 
         /* --- DYNAMIC UPLOAD BOX --- */
         .upload-box {
-            border: 2px dashed #0d6efd; border-radius: 15px; padding: 25px 15px; text-align: center; background-color: rgba(13, 110, 253, 0.05); cursor: pointer; transition: all 0.3s ease;
+            border: 2px dashed #0d6efd; border-radius: 12px; padding: 22px 15px; text-align: center; background-color: rgba(13, 110, 253, 0.05); cursor: pointer; transition: all 0.3s ease;
         }
         .upload-box:hover { background-color: rgba(13, 110, 253, 0.1); transform: translateY(-2px); border-color: #0a58ca; }
-        .upload-box.success-state { border-color: #198754; background-color: rgba(25, 135, 84, 0.1); }
+        .upload-box.success-state { border-color: #198754; background-color: rgba(255, 255, 255, 0.85); }
         .upload-box.success-state h5 { color: #198754 !important; }
+
+        /* --- RESPONSIVE BREAKPOINTS --- */
+        @media (min-width: 769px) {
+            .mobile-topbar {
+                display: none !important;
+            }
+            .sidebar-backdrop {
+                display: none !important;
+            }
+            .sidebar {
+                transform: none !important;
+            }
+            .main-content {
+                margin-left: 260px;
+                padding: 40px;
+                width: calc(100% - 260px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-topbar {
+                display: flex !important;
+            }
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1050 !important;
+                box-shadow: 8px 0 25px rgba(0, 0, 0, 0.25);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+                z-index: 1060 !important;
+            }
+            .main-content {
+                width: 100%;
+                margin-left: 0;
+                padding: 16px;
+            }
+            .glass-panel {
+                padding: 24px 18px;
+                margin-bottom: 20px;
+            }
+        }
     </style>
 </head>
 <body>
 
+    <!-- Full Screen Blurred Background Image (Critical Rule: Kept Intact) -->
     <div class="app-background"></div>
+
+    <!-- Mobile Top Bar (<= 768px only) -->
+    <header class="mobile-topbar align-items-center justify-content-between shadow-sm">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-link text-dark p-0 border-0 fs-2 lh-1" id="mobileMenuToggle" aria-label="Toggle Navigation">
+                <i class="bi bi-list"></i>
+            </button>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" style="height: 32px;" onerror="this.style.display='none'">
+            <span class="fw-bold fs-6 text-dark tracking-wider mb-0">TCEA LIBRARY</span>
+        </div>
+        <div>
+            <a href="{{ url_for('web.lib_dash') }}" class="btn btn-sm btn-dark rounded-pill px-3 py-1 d-flex align-items-center shadow-sm fw-bold text-decoration-none">
+                <i class="bi bi-grid-1x2-fill me-1 text-danger"></i> Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Sidebar Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <div class="dashboard-container">
 
-        <div class="sidebar">
-            <div class="sidebar-logo">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
-                <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
-            </div>
-            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Main</p>
-            <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-            <a href="{{ url_for('web.registration') }}" class="nav-link active"><i class="bi bi-person-plus-fill"></i> Registration</a>
-            <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
-            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Manage</p>
-            <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam-fill"></i> Inventory</a>
-            <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
-            <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
+        <!-- Sidebar Navigation Drawer -->
+        <div class="sidebar" id="sidebarNav">
+            <div class="sidebar-top">
+                <div class="sidebar-logo">
+                    <button type="button" class="btn btn-sm btn-link text-muted d-md-none position-absolute top-0 end-0 p-0 text-decoration-none fs-4 lh-1" id="sidebarCloseBtn" aria-label="Close Sidebar">&times;</button>
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
+                    <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+                </div>
 
-            <div style="position: absolute; bottom: 30px; width: calc(100% - 40px);">
+                <nav class="sidebar-nav">
+                    <h6 class="mt-3 mb-2 ms-2 fw-bold text-muted tracking-wider text-uppercase sidebar-heading" style="font-size: 0.85rem;">MAIN</h6>
+                    <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                    <a href="{{ url_for('web.registration') }}" class="nav-link active"><i class="bi bi-person-plus"></i> Registration</a>
+                    <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
+
+                    <h6 class="mt-4 mb-2 ms-2 fw-bold text-muted tracking-wider text-uppercase sidebar-heading" style="font-size: 0.85rem;">MANAGE</h6>
+                    <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam"></i> Inventory</a>
+                    <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-up"></i> PYQ Papers</a>
+                    <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer"></i> Print QR</a>
+                </nav>
+            </div>
+
+            <!-- Fixed Sign Out Footer -->
+            <div class="sidebar-footer">
                 <a href="{{ url_for('auth.logout') }}" class="nav-link logout-link"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
             </div>
         </div>
@@ -190,73 +400,83 @@
                 {% endwith %}
             </div>
 
+            <!-- Task 3: H1 Registration Center -->
             <div class="mb-5">
-                <h2 class="fw-bold header-title mb-1">Registration Center</h2>
+                <h1 class="fw-bold header-title mb-1">Registration Center</h1>
                 <p class="fs-6 header-subtitle">Add new books to inventory or register new students.</p>
             </div>
 
             <div class="row g-4">
 
                 <div class="col-lg-8">
+                    <!-- Task 1 & Task 2: Responsive form cards with vertical stacking and flex alignment -->
                     <div class="row g-4 h-100">
 
-                        <div class="col-md-6">
-                            <div class="glass-panel">
-                                <h5 class="mb-4 text-primary fw-bold"><i class="bi bi-book-half me-2"></i> Register Book</h5>
+                        <!-- Task 2 & 3: Register Book Card (H2, Flex Height, Margin-Top Auto Button) -->
+                        <div class="col-12 col-md-6">
+                            <div class="glass-panel d-flex flex-column h-100">
+                                <h2 class="h5 mb-4 fw-bold text-dark"><i class="bi bi-book me-2" style="color: #DA291C;"></i> Register Book</h2>
                                 <form action="{{ url_for('web.add_book') }}" method="POST" class="d-flex flex-column flex-grow-1" onsubmit="smartLoadingBtn(this.querySelector('button'), 'Generating...')">
-                                    <input type="text" name="bid" class="form-control mb-3" placeholder="Book ID (e.g. CS101)" oninput="this.value = this.value.toUpperCase()" required>
-                                    <input type="text" name="title" class="form-control mb-3" placeholder="Book Title" required>
-                                    <input type="text" name="author" class="form-control mb-3" placeholder="Author Name" required>
+                                    <div class="flex-grow-1 d-flex flex-column">
+                                        <input type="text" name="bid" class="form-control mb-3" placeholder="Book ID (e.g. CS101)" oninput="this.value = this.value.toUpperCase()" required>
+                                        <input type="text" name="title" class="form-control mb-3" placeholder="Book Title" required>
+                                        <input type="text" name="author" class="form-control mb-3" placeholder="Author Name" required>
 
-                                    <select name="course" id="book-course" class="form-select mb-3" required>
-                                        <option value="" disabled selected>Select Course</option>
-                                        <option value="B.Tech">B.Tech</option>
-                                        <option value="M.Tech">M.Tech</option>
-                                        <option value="Diploma">Diploma</option>
-                                    </select>
+                                        <select name="course" id="book-course" class="form-select mb-3" required>
+                                            <option value="" disabled selected>Select Course</option>
+                                            <option value="B.Tech">B.Tech</option>
+                                            <option value="M.Tech">M.Tech</option>
+                                            <option value="Diploma">Diploma</option>
+                                        </select>
 
-                                    <select name="dept" id="book-dept" class="form-select mb-3" required>
-                                        <option value="" disabled selected>Department</option>
-                                    </select>
+                                        <select name="dept" id="book-dept" class="form-select mb-3" required>
+                                            <option value="" disabled selected>Department</option>
+                                        </select>
 
-                                    <select name="sem" id="book-sem" class="form-select mb-3" required>
-                                        <option value="" disabled selected>Semester</option>
-                                    </select>
+                                        <select name="sem" id="book-sem" class="form-select mb-3" required>
+                                            <option value="" disabled selected>Semester</option>
+                                        </select>
 
-                                    <input type="number" name="qty" class="form-control mb-4" placeholder="Quantity" min="1" oninput="if(this.value<1)this.value=1;" required>
+                                        <input type="number" name="qty" class="form-control mb-4" placeholder="Quantity" min="1" oninput="if(this.value<1)this.value=1;" required>
+                                    </div>
 
+                                    <!-- Task 4: Standardized TCEA Crimson Button -->
                                     <div class="mt-auto">
-                                        <button type="submit" class="btn btn-tcea-primary w-100"><i class="bi bi-qr-code me-2"></i>Generate Book QR</button>
+                                        <button type="submit" class="btn btn-crimson w-100"><i class="bi bi-qr-code me-2"></i>Generate Book QR</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <div class="glass-panel">
-                                <h5 class="mb-4 text-success fw-bold"><i class="bi bi-person-badge-fill me-2"></i> Register Student</h5>
+                        <!-- Task 2 & 3: Register Student Card (H2, Flex Height, Margin-Top Auto Button) -->
+                        <div class="col-12 col-md-6">
+                            <div class="glass-panel d-flex flex-column h-100">
+                                <h2 class="h5 mb-4 fw-bold text-dark"><i class="bi bi-person-badge me-2" style="color: #DA291C;"></i> Register Student</h2>
                                 <form action="{{ url_for('web.add_student') }}" method="POST" class="d-flex flex-column flex-grow-1" onsubmit="smartLoadingBtn(this.querySelector('button'), 'Generating...')">
-                                    <input type="text" name="sid" class="form-control mb-3" placeholder="Roll No (e.g. CSE01)" oninput="this.value = this.value.toUpperCase()" required>
-                                    <input type="text" name="name" class="form-control mb-3" placeholder="Full Name" required>
-                                    <input type="email" name="email" class="form-control mb-3" placeholder="Email Address" required>
+                                    <div class="flex-grow-1 d-flex flex-column">
+                                        <input type="text" name="sid" class="form-control mb-3" placeholder="Roll No (e.g. CSE01)" oninput="this.value = this.value.toUpperCase()" required>
+                                        <input type="text" name="name" class="form-control mb-3" placeholder="Full Name" required>
+                                        <input type="email" name="email" class="form-control mb-3" placeholder="Email Address" required>
 
-                                    <select name="course" id="stu-course" class="form-select mb-3" required>
-                                        <option value="" disabled selected>Select Course</option>
-                                        <option value="B.Tech">B.Tech</option>
-                                        <option value="M.Tech">M.Tech</option>
-                                        <option value="Diploma">Diploma</option>
-                                    </select>
+                                        <select name="course" id="stu-course" class="form-select mb-3" required>
+                                            <option value="" disabled selected>Select Course</option>
+                                            <option value="B.Tech">B.Tech</option>
+                                            <option value="M.Tech">M.Tech</option>
+                                            <option value="Diploma">Diploma</option>
+                                        </select>
 
-                                    <select name="dept" id="stu-dept" class="form-select mb-3" required>
-                                        <option value="" disabled selected>Department</option>
-                                    </select>
+                                        <select name="dept" id="stu-dept" class="form-select mb-3" required>
+                                            <option value="" disabled selected>Department</option>
+                                        </select>
 
-                                    <select name="sem" id="stu-sem" class="form-select mb-4" required>
-                                        <option value="" disabled selected>Semester</option>
-                                    </select>
+                                        <select name="sem" id="stu-sem" class="form-select mb-4" required>
+                                            <option value="" disabled selected>Semester</option>
+                                        </select>
+                                    </div>
 
+                                    <!-- Task 4: Standardized TCEA Crimson Button aligned with Book QR Button -->
                                     <div class="mt-auto">
-                                        <button type="submit" class="btn btn-tcea-success w-100"><i class="bi bi-qr-code me-2"></i>Generate Student QR</button>
+                                        <button type="submit" class="btn btn-crimson w-100"><i class="bi bi-qr-code me-2"></i>Generate Student QR</button>
                                     </div>
                                 </form>
                             </div>
@@ -267,36 +487,39 @@
 
                 <div class="col-lg-4 d-flex flex-column gap-4">
 
+                    <!-- Task 3 & 4: QR Preview Card (H2, removed red top border, standardized 16px radius) -->
                     <div class="qr-badge-container flex-grow-1">
-                        <h6 class="fw-bold mb-3 text-dark text-uppercase" style="letter-spacing: 1px;"><i class="bi bi-qr-code-scan me-2 text-danger"></i> QR Preview</h6>
+                        <h2 class="h5 fw-bold mb-3 text-dark"><i class="bi bi-qr-code-scan me-2" style="color: #DA291C;"></i> QR Preview</h2>
 
                         {% if qr_file %}
-                            <img src="{{ url_for('static', filename='qrcodes/' + qr_file) }}" class="qr-image shadow-sm">
+                            <img src="{{ url_for('static', filename='qrcodes/' + qr_file) }}" class="qr-image shadow-sm" alt="Generated QR">
                             <p class="text-success small fw-bold mb-3"><i class="bi bi-check-circle-fill me-1"></i> Generated Successfully!</p>
-                            <a href="{{ url_for('static', filename='qrcodes/' + qr_file) }}" download class="btn btn-sm btn-dark fw-bold rounded-pill px-4 py-2 shadow-sm">
+                            <a href="{{ url_for('static', filename='qrcodes/' + qr_file) }}" download class="btn btn-slate fw-bold px-4 py-2 shadow-sm" style="border-radius: 12px; font-size: 0.85rem;">
                                 <i class="bi bi-download me-1"></i> Save Image
                             </a>
                         {% else %}
-                            <div class="py-4 text-muted text-center w-100" style="border: 2px dashed rgba(0,0,0,0.15); border-radius: 15px; background: rgba(255,255,255,0.5);">
+                            <div class="py-4 text-muted text-center w-100" style="border: 2px dashed rgba(0,0,0,0.15); border-radius: 12px; background: rgba(255,255,255,0.5);">
                                 <i class="bi bi-qr-code text-secondary opacity-50" style="font-size: 3.5rem;"></i>
                                 <p class="mt-3 mb-0 small fw-bold">Waiting for generation...</p>
                             </div>
                         {% endif %}
                     </div>
 
+                    <!-- Task 3 & 4: Bulk Upload Books Card (H2, removed text-uppercase, slate button) -->
                     <div class="glass-panel glass-panel-compact">
-                        <h6 class="text-dark fw-bold mb-2 text-uppercase"><i class="bi bi-filetype-csv me-2 text-primary"></i> Bulk Upload Books</h6>
-                        <p class="small text-muted mb-2" style="font-size: 0.8rem;">Upload multiple books via CSV instantly.</p>
+                        <h2 class="h5 text-dark fw-bold mb-2"><i class="bi bi-filetype-csv me-2" style="color: #DA291C;"></i> Bulk Upload Books</h2>
+                        <p class="small text-muted mb-2" style="font-size: 0.85rem;">Upload multiple books via CSV instantly.</p>
 
                         <form action="{{ url_for('web.bulk_upload_books') }}" method="POST" enctype="multipart/form-data" onsubmit="smartLoadingBtn(this.querySelector('button'), 'Uploading...')">
 
                             <div class="upload-box mt-2 mb-3" id="uploadBox" onclick="document.getElementById('fileInput').click()">
                                 <input type="file" id="fileInput" name="csv_file" accept=".csv" hidden required>
-                                <i class="bi bi-cloud-arrow-up-fill text-primary mb-2" style="font-size: 2.5rem;" id="uploadIcon"></i>
+                                <i class="bi bi-cloud-arrow-up text-primary mb-2" style="font-size: 2.5rem;" id="uploadIcon"></i>
                                 <h5 id="uploadText" class="mt-2 text-dark fw-bold mb-0" style="font-size: 0.85rem;">Click to browse or drag file</h5>
                             </div>
 
-                            <button type="submit" class="btn btn-tcea-secondary w-100 mb-3 py-2 shadow-sm"><i class="bi bi-cloud-upload me-2"></i>Upload & Generate</button>
+                            <!-- Task 4: Standardized Dark Slate Button -->
+                            <button type="submit" class="btn btn-slate w-100 mb-3 py-2 shadow-sm"><i class="bi bi-cloud-upload me-2"></i>Upload & Generate</button>
                         </form>
 
                         <div class="text-center">
@@ -360,10 +583,49 @@
             document.getElementById('stu-course').addEventListener('change', function() {
                 updateMenus('stu-course', 'stu-dept', 'stu-sem');
             });
+
+            // Mobile Sidebar drawer toggle
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+            const sidebarNav = document.getElementById('sidebarNav');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+            function openSidebar() {
+                if (sidebarNav) sidebarNav.classList.add('show');
+                if (sidebarBackdrop) sidebarBackdrop.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebarNav) sidebarNav.classList.remove('show');
+                if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', openSidebar);
+            }
+            if (sidebarCloseBtn) {
+                sidebarCloseBtn.addEventListener('click', closeSidebar);
+            }
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', closeSidebar);
+            }
+
+            // Close sidebar when clicking any nav item on mobile
+            if (sidebarNav) {
+                sidebarNav.querySelectorAll('.nav-link').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            closeSidebar();
+                        }
+                    });
+                });
+            }
         });
 
         // --- DYNAMIC UPLOAD BOX LOGIC ---
-       document.getElementById('fileInput').addEventListener('change', function() {
+        document.getElementById('fileInput').addEventListener('change', function() {
             const uploadBox = document.getElementById('uploadBox');
             const uploadText = document.getElementById('uploadText');
             const uploadIcon = document.getElementById('uploadIcon');
@@ -375,7 +637,7 @@
                 uploadText.innerText = "Selected: " + this.files[0].name;
             } else {
                 uploadBox.classList.remove('success-state');
-                uploadIcon.className = 'bi bi-cloud-arrow-up-fill text-primary mb-2';
+                uploadIcon.className = 'bi bi-cloud-arrow-up text-primary mb-2';
                 uploadIcon.style.fontSize = '2.5rem';
                 uploadText.innerText = "Click to browse or drag file";
             }
