@@ -11,84 +11,396 @@
     
     <style>
         * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background: linear-gradient(135deg, #e0e5ec 0%, #f8f9fa 100%); margin: 0; padding: 0; overflow-x: hidden; min-height: 100vh; }
+        html, body {
+            background: linear-gradient(135deg, #e0e5ec 0%, #f8f9fa 100%);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
 
-        /* --- SIGN OUT BUTTON FIX --- */
-        .logout-link { color: #DA291C !important; font-weight: 600; }
-        .logout-link:hover { color: #ffffff !important; }
-
-        /* --- ENERGETIC 3D FLOATING BACKGROUND ORBS --- */
+        /* --- ENERGETIC 3D FLOATING BACKGROUND ORBS (Critical Rule: Preserved Intact) --- */
         .bg-shape { position: fixed; filter: blur(80px); z-index: -1; opacity: 0.4; animation: float 12s infinite ease-in-out alternate; }
         .bg-shape-1 { width: 500px; height: 500px; background: #DA291C; top: -100px; right: -50px; border-radius: 50%; }
         .bg-shape-2 { width: 600px; height: 600px; background: #212529; bottom: -150px; left: -100px; border-radius: 50%; animation-delay: -6s; }
         @keyframes float { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(50px) scale(1.05); } }
 
-        /* --- SIDEBAR --- */
-        .dashboard-container { display: flex; min-height: 100vh; position: relative; z-index: 1; }
-        .sidebar { width: 260px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); color: #212529; padding: 30px 20px; position: fixed; height: 100vh; box-shadow: 4px 0 25px rgba(0,0,0,0.05); z-index: 100; }
-        .sidebar-logo { text-align: center; margin-bottom: 40px; }
-        .sidebar-logo img { width: 100px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
-        .nav-link { color: #495057; font-weight: 500; padding: 12px 20px; border-radius: 10px; margin-bottom: 5px; transition: all 0.3s; display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .nav-link:hover, .nav-link.active { color: #fff; background: linear-gradient(135deg, #DA291C, #b51f15); box-shadow: 0 4px 10px rgba(218, 41, 28, 0.3); transform: translateX(5px); }
-        .main-content { flex: 1; margin-left: 260px; padding: 40px; }
+        /* --- DASHBOARD WRAPPER --- */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            width: 100%;
+        }
 
-        /* --- GLASS PANELS --- */
-        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 30px; margin-bottom: 30px; }
+        /* --- SIDEBAR FLEX & NAVIGATION (Task 1) --- */
+        .sidebar {
+            width: 260px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: #212529;
+            padding: 30px 20px 20px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-y: auto;
+            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar-top {
+            flex: 1 0 auto;
+        }
+        .sidebar-logo {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .sidebar-logo img {
+            width: 100px;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+        }
+        .sidebar-heading {
+            font-size: 0.85rem;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: #6c757d;
+        }
+
+        .nav-link {
+            color: #495057;
+            font-weight: 500;
+            padding: 10px 16px;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            color: #DA291C;
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .nav-link.active {
+            color: #ffffff !important;
+            background: #DA291C !important;
+            box-shadow: 0 4px 10px rgba(218, 41, 28, 0.2) !important;
+            transform: none;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            flex-shrink: 0;
+            width: 100%;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .logout-link {
+            color: #DA291C !important;
+            font-weight: 600;
+            margin-bottom: 0;
+            padding: 10px 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease-in-out;
+        }
+        .logout-link:hover {
+            color: #b51f15 !important;
+            background-color: rgba(218, 41, 28, 0.08) !important;
+        }
+
+        /* --- MOBILE TOP BAR & BACKDROP --- */
+        .mobile-topbar {
+            display: none;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding: 10px 16px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 40px;
+            width: calc(100% - 260px);
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+        .header-title {
+            color: #212529 !important;
+            font-size: 1.85rem;
+        }
+
+        /* --- GLASS PANELS (Standardized 16px radius) --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
 
         /* --- INPUTS & FILTERS --- */
-        input.form-control, select.form-select { background-color: #f3f4f7; border: 2px solid transparent; padding: 10px 15px; border-radius: 10px; transition: all 0.3s ease; font-size: 0.95rem; color: #495057; }
-        input.form-control:focus, select.form-select:focus { background-color: #fff; border-color: #DA291C; box-shadow: 0 4px 15px rgba(218, 41, 28, 0.15); outline: none; }
+        input.form-control, select.form-select {
+            background-color: #f3f4f7;
+            border: 2px solid transparent;
+            padding: 10px 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            color: #495057;
+        }
+        input.form-control:focus, select.form-select:focus {
+            background-color: #fff;
+            border-color: #DA291C;
+            box-shadow: 0 4px 15px rgba(218, 41, 28, 0.15);
+            outline: none;
+        }
 
         /* --- TOGGLE BUTTONS --- */
-        .btn-primary { background: linear-gradient(135deg, #0d6efd, #0b5ed7); border: none; box-shadow: 0 4px 10px rgba(13,110,253,0.3); color: white !important; }
-        .btn-outline-primary { border: 2px solid #0d6efd; color: #0d6efd; background: rgba(255,255,255,0.8); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn-outline-primary:hover { background: #0d6efd; color: white; box-shadow: 0 4px 15px rgba(13,110,253,0.3); }
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            border: none;
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+            color: white !important;
+        }
+        .btn-outline-primary {
+            border: 2px solid #0d6efd;
+            color: #0d6efd;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .btn-outline-primary:hover {
+            background: #0d6efd;
+            color: white;
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+        }
 
-        /* --- CUSTOM TABLES --- */
-        .table-custom { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-        .table-custom th { color: #6c757d; font-weight: 700; text-transform: uppercase; font-size: 0.80rem; letter-spacing: 0.5px; padding: 12px 15px; border: none; background: transparent; transition: all 0.2s; }
-        .sortable-th { border-radius: 8px; cursor: pointer; }
-        .sortable-th:hover { background-color: rgba(218, 41, 28, 0.08); color: #DA291C; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transform: translateY(-2px); }
-        .table-custom tbody tr { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s; }
-        .table-custom tbody tr:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-        .table-custom td { padding: 12px 15px; vertical-align: middle; border: none; color: #212529; font-weight: 500; font-size: 0.95rem; }
+        /* --- CUSTOM RESPONSIVE TABLES (Task 3 / Issue 5) --- */
+        .table-responsive {
+            border-radius: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-custom {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            min-width: 650px;
+        }
+        .table-custom th {
+            color: #6c757d;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.80rem;
+            letter-spacing: 0.5px;
+            padding: 12px 15px;
+            border: none;
+            background: transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .sortable-th {
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .sortable-th:hover {
+            background-color: rgba(218, 41, 28, 0.08);
+            color: #DA291C;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        .table-custom tbody tr {
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .table-custom tbody tr:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        /* Issue 5: Minimum font size 13px or 14px on table body text */
+        .table-custom td, .table-custom tbody td {
+            padding: 14px 15px;
+            vertical-align: middle;
+            border: none;
+            color: #212529;
+            font-weight: 500;
+            font-size: 14px;
+        }
         .table-custom td:first-child { border-radius: 10px 0 0 10px; }
         .table-custom td:last-child { border-radius: 0 10px 10px 0; }
-        .btn-action { border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.2s; }
-        .btn-action:hover { transform: translateY(-2px); }
 
-        /* INTERACTIVE ISSUED BUTTON */
-        .btn-issued-pill { transition: all 0.3s ease; cursor: pointer; }
-        .btn-issued-pill:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 15px rgba(255, 193, 7, 0.4) !important; background-color: #ffca2c !important; }
+        /* Issues 3 & 4: Clean Icon-Only Ghost Action Buttons */
+        .btn-action-ghost {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            background: transparent;
+        }
+        .btn-action-ghost:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
 
-        /* --- PREMIUM MODALS --- */
-        .modal-content { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 20px; border: none; box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
-        .modal-header { border-radius: 20px 20px 0 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .modal-footer { border-top: 1px solid rgba(0,0,0,0.05); }
+        /* INTERACTIVE ISSUED BADGE BUTTON */
+        .btn-issued-pill {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .btn-issued-pill:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 15px rgba(255, 193, 7, 0.4) !important;
+            background-color: #ffca2c !important;
+        }
+
+        /* --- STANDARDIZED 16PX MODALS --- */
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        .modal-header {
+            border-radius: 16px 16px 0 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .modal-footer {
+            border-radius: 0 0 16px 16px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- RESPONSIVE BREAKPOINTS (Task 1) --- */
+        @media (min-width: 769px) {
+            .mobile-topbar {
+                display: none !important;
+            }
+            .sidebar-backdrop {
+                display: none !important;
+            }
+            .sidebar {
+                transform: none !important;
+            }
+            .main-content {
+                margin-left: 260px;
+                padding: 40px;
+                width: calc(100% - 260px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-topbar {
+                display: flex !important;
+            }
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1050 !important;
+                box-shadow: 8px 0 25px rgba(0, 0, 0, 0.25);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+                z-index: 1060 !important;
+            }
+            .main-content {
+                width: 100%;
+                margin-left: 0;
+                padding: 16px;
+            }
+            .glass-panel {
+                padding: 20px 16px;
+                margin-bottom: 20px;
+            }
+        }
     </style>
 </head>
 <body>
 
+    <!-- Energetic 3D Floating Background Orbs (Critical Rule: Preserved Intact) -->
     <div class="bg-shape bg-shape-1"></div>
     <div class="bg-shape bg-shape-2"></div>
 
+    <!-- Mobile Top Bar (<= 768px only) -->
+    <header class="mobile-topbar align-items-center justify-content-between shadow-sm">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-link text-dark p-0 border-0 fs-2 lh-1" id="mobileMenuToggle" aria-label="Toggle Navigation">
+                <i class="bi bi-list"></i>
+            </button>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" style="height: 32px;" onerror="this.style.display='none'">
+            <span class="fw-bold fs-6 text-dark tracking-wider mb-0">TCEA LIBRARY</span>
+        </div>
+        <div>
+            <a href="{{ url_for('web.lib_dash') }}" class="btn btn-sm btn-dark rounded-pill px-3 py-1 d-flex align-items-center shadow-sm fw-bold text-decoration-none">
+                <i class="bi bi-grid-1x2-fill me-1 text-danger"></i> Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Sidebar Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <div class="dashboard-container">
 
-        <div class="sidebar">
-            <div class="sidebar-logo">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
-                <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+        <!-- Sidebar Navigation Drawer -->
+        <div class="sidebar" id="sidebarNav">
+            <div class="sidebar-top">
+                <div class="sidebar-logo">
+                    <button type="button" class="btn btn-sm btn-link text-muted d-md-none position-absolute top-0 end-0 p-0 text-decoration-none fs-4 lh-1" id="sidebarCloseBtn" aria-label="Close Sidebar">&times;</button>
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="TCEA Logo" onerror="this.style.display='none'">
+                    <h5 class="mt-3 fw-bold tracking-wider" style="color: #212529;">TCEA LIBRARY</h5>
+                </div>
+                <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase sidebar-heading" style="letter-spacing: 1.5px; font-size: 0.85rem;">Main</p>
+                <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+                <a href="{{ url_for('web.registration') }}" class="nav-link"><i class="bi bi-person-plus-fill"></i> Registration</a>
+                <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
+                <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase sidebar-heading" style="letter-spacing: 1.5px; font-size: 0.85rem;">Manage</p>
+                <a href="{{ url_for('web.inventory') }}" class="nav-link active"><i class="bi bi-box-seam-fill"></i> Inventory</a>
+                <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
+                <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
             </div>
-            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Main</p>
-            <a href="{{ url_for('web.lib_dash') }}" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-            <a href="{{ url_for('web.registration') }}" class="nav-link"><i class="bi bi-person-plus-fill"></i> Registration</a>
-            <a href="{{ url_for('web.scanning') }}" class="nav-link"><i class="bi bi-upc-scan"></i> Scanning</a>
-            <p class="text-muted fw-bold mb-2 ms-2 mt-4 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.70rem;">Manage</p>
-            <a href="{{ url_for('web.inventory') }}" class="nav-link active"><i class="bi bi-box-seam-fill"></i> Inventory</a>
-            <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-up-fill"></i> PYQ Papers</a>
-            <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer-fill"></i> Print QR</a>
 
-            <div style="position: absolute; bottom: 30px; width: calc(100% - 40px);">
+            <!-- Task 1: Fixed bottom Sign Out using margin-top: auto -->
+            <div class="sidebar-footer">
                 <a href="{{ url_for('auth.logout') }}" class="nav-link logout-link"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
             </div>
         </div>
@@ -109,9 +421,10 @@
                 {% endwith %}
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <!-- Task 2 / Issue 2: Page Title Promoted to H1 -->
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
-                    <h2 class="fw-bold" style="color: #212529;">System Directory</h2>
+                    <h1 class="fw-bold header-title mb-1">System Directory</h1>
                     <p class="mb-0 fs-6 text-muted">Manage books and registered students.</p>
                 </div>
 
@@ -125,14 +438,15 @@
                 </div>
             </div>
 
+            <!-- Task 2 / Issue 7: Enhanced Filter Labels with 0.9rem font-size and mb-2 vertical spacing -->
             <div class="glass-panel py-4 mb-4">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
-                        <label class="text-secondary fw-bold mb-1" style="font-size: 0.85rem;"><i class="bi bi-search me-1"></i> Search Directory</label>
+                        <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-search me-1"></i> Search Directory</label>
                         <input type="text" id="search-input" class="form-control" placeholder="Search by ID,Title...">
                     </div>
                     <div class="col-md-3">
-                        <label class="text-secondary fw-bold mb-1" style="font-size: 0.85rem;"><i class="bi bi-mortarboard-fill me-1"></i> Filter Course</label>
+                        <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-mortarboard-fill me-1"></i> Filter Course</label>
                         <select id="filter-course" class="form-select">
                             <option value="All">All Courses</option>
                             <option value="B.Tech">B.Tech</option>
@@ -141,13 +455,13 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="text-secondary fw-bold mb-1" style="font-size: 0.85rem;"><i class="bi bi-building me-1"></i> Filter Dept</label>
+                        <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-building me-1"></i> Filter Dept</label>
                         <select id="filter-dept" class="form-select">
                             <option value="All">All Departments</option>
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="text-secondary fw-bold mb-1" style="font-size: 0.85rem;"><i class="bi bi-calendar3 me-1"></i> Filter Sem</label>
+                        <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-calendar3 me-1"></i> Filter Sem</label>
                         <select id="filter-sem" class="form-select">
                             <option value="All">All Semesters</option>
                         </select>
@@ -155,6 +469,7 @@
                 </div>
             </div>
 
+            <!-- Books Section -->
             <div class="glass-panel" id="books-section">
                 <div class="table-responsive">
                     <table class="table-custom" id="book-table">
@@ -174,36 +489,43 @@
                         <tbody>
                             {% for b in books %}
                             <tr class="list-row book-row" data-course="{{ b.course }}" data-dept="{{ b.dept }}" data-sem="{{ b.semester }}">
-                                <td class="fw-bold text-primary">{{ b.id }}</td>
-                                <td class="fw-bold">{{ b.title }}</td>
-                                <td class="text-muted" style="font-size: 0.85rem;">{{ b.author }}</td>
-                                <td><span class="badge bg-secondary rounded-pill px-2 py-1">{{ b.course }}</span></td>
-                                <td><span class="badge bg-dark rounded-pill px-2 py-1">{{ b.dept }}</span></td>
-                                <td><span class="fw-medium text-muted">{{ b.semester }}</span></td>
-                                <td class="text-center">
+                                <td class="fw-bold text-primary align-middle">{{ b.id }}</td>
+                                <td class="fw-bold align-middle">{{ b.title }}</td>
+                                <td class="text-muted align-middle" style="font-size: 13.5px;">{{ b.author }}</td>
+                                <td class="align-middle"><span class="badge bg-secondary rounded-pill px-2 py-1">{{ b.course }}</span></td>
+                                <td class="align-middle"><span class="badge bg-dark rounded-pill px-2 py-1">{{ b.dept }}</span></td>
+                                <td class="align-middle"><span class="fw-medium text-muted">{{ b.semester }}</span></td>
+                                
+                                <!-- Task 4 / Issues 6 & 8: Standardized uniform pill badges & center alignment -->
+                                <td class="text-center align-middle">
                                     {% if b.available > 3 %}
-                                        <span class="badge bg-success rounded-pill px-3 py-2 fs-6 shadow-sm">{{ b.available }}</span>
+                                        <span class="badge rounded-pill bg-success px-3 py-2 fs-6 shadow-sm">{{ b.available }}</span>
                                     {% elif b.available > 0 %}
-                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fs-6 shadow-sm">{{ b.available }} (Low)</span>
+                                        <span class="badge rounded-pill bg-warning text-dark px-3 py-2 fs-6 shadow-sm">{{ b.available }} (Low)</span>
                                     {% else %}
-                                        <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm">0</span>
+                                        <span class="badge rounded-pill bg-danger px-3 py-2 fs-6 shadow-sm">0</span>
                                     {% endif %}
                                 </td>
 
-                                <td class="text-center">
+                                <td class="text-center align-middle">
                                     {% if b.issued > 0 %}
-                                        <button class="btn btn-sm bg-warning text-dark rounded-pill px-3 py-1 fw-bold border-0 shadow-sm btn-issued-pill d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#activeIssuesModal{{ b.id }}" title="View who borrowed this book">
+                                        <span class="badge rounded-pill bg-warning text-dark px-3 py-2 fs-6 shadow-sm btn-issued-pill d-inline-flex align-items-center" role="button" data-bs-toggle="modal" data-bs-target="#activeIssuesModal{{ b.id }}" title="View who borrowed this book">
                                             {{ b.issued }} <i class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.70rem; opacity: 0.8;"></i>
-                                        </button>
+                                        </span>
                                     {% else %}
-                                        <span class="text-muted fw-bold">0</span>
+                                        <span class="badge rounded-pill bg-secondary px-3 py-2 fs-6 shadow-sm">0</span>
                                     {% endif %}
                                 </td>
 
-                                <td class="text-end">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-primary btn-action" data-bs-toggle="modal" data-bs-target="#editModal{{ b.id }}"><i class="bi bi-pencil-square"></i> Edit</button>
-                                        <a href="{{ url_for('web.delete_book', bid=b.id) }}" class="btn btn-danger btn-action" onclick="return confirm('Delete {{ b.title }}?');"><i class="bi bi-trash3-fill"></i> Delete</a>
+                                <!-- Task 3 / Issues 3 & 4: Icon-Only Ghost Action Buttons -->
+                                <td class="text-end align-middle">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary border-0 btn-action-ghost" data-bs-toggle="modal" data-bs-target="#editModal{{ b.id }}" title="Edit">
+                                            <i class="bi bi-pencil-square fs-5"></i>
+                                        </button>
+                                        <a href="{{ url_for('web.delete_book', bid=b.id) }}" class="btn btn-sm btn-outline-danger border-0 btn-action-ghost" onclick="return confirm('Delete {{ b.title }}?');" title="Delete">
+                                            <i class="bi bi-trash fs-5"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -212,7 +534,9 @@
                     </table>
                 </div>
             </div>
-<div class="glass-panel" id="students-section" style="display: none;">
+
+            <!-- Students Section -->
+            <div class="glass-panel" id="students-section" style="display: none;">
                 <div class="table-responsive">
                     <table class="table-custom" id="student-table">
                         <thead>
@@ -229,16 +553,22 @@
                         <tbody>
                             {% for s in students %}
                             <tr class="list-row student-row" data-course="{{ s.course }}" data-dept="{{ s.dept }}" data-sem="{{ s.semester }}">
-                                <td class="fw-bold text-success">{{ s.id }}</td>
-                                <td class="fw-bold">{{ s.name }}</td>
-                                <td class="text-muted" style="font-size: 0.85rem;">{{ s.email }}</td>
-                                <td><span class="badge bg-secondary rounded-pill px-2 py-1">{{ s.course }}</span></td>
-                                <td><span class="badge bg-dark rounded-pill px-2 py-1">{{ s.dept }}</span></td>
-                                <td><span class="fw-medium text-muted">{{ s.semester }}</span></td>
-                                <td class="text-end">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-primary btn-action" data-bs-toggle="modal" data-bs-target="#editStudentModal{{ s.id }}"><i class="bi bi-pencil-square"></i> Edit</button>
-                                        <a href="{{ url_for('web.delete_student', sid=s.id) }}" class="btn btn-danger btn-action" onclick="return confirm('Delete Student: {{ s.name }}?');"><i class="bi bi-trash3-fill"></i> Delete</a>
+                                <td class="fw-bold text-success align-middle">{{ s.id }}</td>
+                                <td class="fw-bold align-middle">{{ s.name }}</td>
+                                <td class="text-muted align-middle" style="font-size: 13.5px;">{{ s.email }}</td>
+                                <td class="align-middle"><span class="badge bg-secondary rounded-pill px-2 py-1">{{ s.course }}</span></td>
+                                <td class="align-middle"><span class="badge bg-dark rounded-pill px-2 py-1">{{ s.dept }}</span></td>
+                                <td class="align-middle"><span class="fw-medium text-muted">{{ s.semester }}</span></td>
+                                
+                                <!-- Task 3 / Issues 3 & 4: Icon-Only Ghost Action Buttons -->
+                                <td class="text-end align-middle">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary border-0 btn-action-ghost" data-bs-toggle="modal" data-bs-target="#editStudentModal{{ s.id }}" title="Edit">
+                                            <i class="bi bi-pencil-square fs-5"></i>
+                                        </button>
+                                        <a href="{{ url_for('web.delete_student', sid=s.id) }}" class="btn btn-sm btn-outline-danger border-0 btn-action-ghost" onclick="return confirm('Delete Student: {{ s.name }}?');" title="Delete">
+                                            <i class="bi bi-trash fs-5"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -251,8 +581,8 @@
         </div>
     </div>
 
+    <!-- Modals for Books (Standardized 16px radius) -->
     {% for b in books %}
-
     <div class="modal fade" id="editModal{{ b.id }}" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -296,7 +626,7 @@
                       </div>
                   </div>
               </div>
-              <div class="modal-footer bg-light" style="border-radius: 0 0 20px 20px;">
+              <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
                 <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">Save Changes</button>
               </div>
@@ -345,7 +675,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer bg-light border-0" style="border-radius: 0 0 20px 20px;">
+                <div class="modal-footer bg-light border-0" style="border-radius: 0 0 16px 16px;">
                     <button type="button" class="btn btn-secondary fw-bold px-4 shadow-sm" data-bs-dismiss="modal">Close Window</button>
                 </div>
             </div>
@@ -353,6 +683,7 @@
     </div>
     {% endfor %}
 
+    <!-- Modals for Students (Standardized 16px radius) -->
     {% for s in students %}
     <div class="modal fade" id="editStudentModal{{ s.id }}" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -391,7 +722,7 @@
                       </div>
                   </div>
               </div>
-              <div class="modal-footer bg-light" style="border-radius: 0 0 20px 20px;">
+              <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
                 <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" style="background: linear-gradient(135deg, #198754, #146c43); border: none;">Save Changes</button>
               </div>
@@ -405,6 +736,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Auto dismiss flash alerts
             setTimeout(function() {
                 let flashMessages = document.querySelectorAll('.flash-msg');
                 flashMessages.forEach(function(msg) {
@@ -413,6 +745,44 @@
                     setTimeout(function() { msg.remove(); }, 500);
                 });
             }, 4500);
+
+            // Mobile Sidebar Drawer Toggle Logic
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+            const sidebarNav = document.getElementById('sidebarNav');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+            function openSidebar() {
+                if (sidebarNav) sidebarNav.classList.add('show');
+                if (sidebarBackdrop) sidebarBackdrop.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebarNav) sidebarNav.classList.remove('show');
+                if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', openSidebar);
+            }
+            if (sidebarCloseBtn) {
+                sidebarCloseBtn.addEventListener('click', closeSidebar);
+            }
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', closeSidebar);
+            }
+
+            if (sidebarNav) {
+                sidebarNav.querySelectorAll('.nav-link').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            closeSidebar();
+                        }
+                    });
+                });
+            }
         });
 
         function switchTab(tabName) {
