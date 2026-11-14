@@ -1,9 +1,7 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
 
-const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
-const currentIP = hostUri ? hostUri.split(':')[0] : '127.0.0.1';
-export const baseURL = `http://${currentIP}:5000/api`;
+export const BACKEND_URL = 'https://qrblms.pythonanywhere.com'.replace(/\/+$/, '');
+export const baseURL = `${BACKEND_URL}/api`;
 
 const apiClient = axios.create({
   baseURL,
@@ -70,8 +68,9 @@ export const changePassword = async (student_id: string, current_password: strin
 export const getFullImageUrl = (path?: string | null) => {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  const serverRoot = baseURL.replace('/api', '');
-  return `${serverRoot}${path.startsWith('/') ? '' : '/'}${path}`;
+  const serverRoot = baseURL.replace('/api', '').replace(/\/+$/, '');
+  const cleanPath = path.replace(/^\/+/, '');
+  return `${serverRoot}/${cleanPath}`;
 };
 
 export const uploadAvatar = async (

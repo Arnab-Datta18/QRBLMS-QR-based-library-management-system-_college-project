@@ -56,8 +56,9 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
   const getFullPdfUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    const serverUrl = baseURL.replace('/api', '');
-    return `${serverUrl}${url}`;
+    const serverUrl = baseURL.replace('/api', '').replace(/\/+$/, '');
+    const cleanUrl = url.replace(/^\/+/, '');
+    return `${serverUrl}/${cleanUrl}`;
   };
 
   const handleDownload = async (p: any) => {
