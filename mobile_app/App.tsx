@@ -1,15 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, LogBox } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useFonts, PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  useFonts,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent native splash screen from hiding before fonts/assets load
+SplashScreen.preventAutoHideAsync();
 
 LogBox.ignoreLogs(['[expo-notifications]', 'expo-notifications']);
 
 import Login from './screens/Login';
-import Splash from './screens/Splash';
 import Home from './screens/Home';
 import Academics from './screens/Academics';
 import Borrowed from './screens/Borrowed';
@@ -155,16 +164,26 @@ function MainTabs({ navigation }: any) {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    JetBrainsMono_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <NavigationContainer theme={DefaultTheme}>
-      <Stack.Navigator initialRouteName="Splash">
-        {/* Animated Splash Screen */}
-        <Stack.Screen
-          name="Splash"
-          component={Splash}
-          options={{ headerShown: false }}
-        />
-
+      <Stack.Navigator initialRouteName="Login">
         {/* Login Screen (No Header) */}
         <Stack.Screen
           name="Login"
