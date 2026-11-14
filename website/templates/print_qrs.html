@@ -199,6 +199,7 @@
             width: calc(100% - 260px);
             min-height: 100vh;
             min-height: 100dvh;
+            overflow-x: hidden;
         }
         .header-title {
             color: #212529 !important;
@@ -249,6 +250,21 @@
             transform: translateY(-2px);
             color: white;
             box-shadow: 0 8px 20px rgba(13, 110, 253, 0.35);
+        }
+
+        /* --- QR CARD GRID CONTAINER (Responsive CSS Grid) --- */
+        .qr-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 16px;
+            width: 100%;
+        }
+
+        .qr-box {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         /* --- QR CARD DESIGN (Task 4 & 5 / Standardized 16px radius) --- */
@@ -362,6 +378,12 @@
             .print-container, .print-container * { visibility: visible; }
             .print-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
             .hide-on-print { display: none !important; }
+            .qr-grid-container {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 15px !important;
+                width: 100% !important;
+            }
             .qr-box { break-inside: avoid; page-break-inside: avoid; margin-bottom: 20px; }
             .exclude-from-print { display: none !important; }
             
@@ -479,9 +501,9 @@
                 </div>
             </div>
 
-            <div class="row mb-5" id="book-container">
+            <div class="qr-grid-container mb-5" id="book-container">
                 {% for b in books %}
-                <div class="col-md-3 col-sm-6 mb-4 qr-box" data-course="{{ b.course }}" data-dept="{{ b.dept }}" data-sem="{{ b.semester }}">
+                <div class="qr-box" data-course="{{ b.course }}" data-dept="{{ b.dept }}" data-sem="{{ b.semester }}">
                     <div class="qr-card">
                         
                         <!-- Task 2: Pushed safely inside card boundaries via position: absolute; top: 12px; left: 12px; margin: 0; -->
@@ -506,10 +528,8 @@
                     </div>
                 </div>
                 {% else %}
-                <div class="col-12 hide-on-print">
-                    <div class="alert bg-white text-muted shadow-sm border-0 rounded-3">
-                        <i class="bi bi-info-circle-fill me-2 text-primary"></i> No Book QR codes generated yet.
-                    </div>
+                <div class="alert bg-white text-muted shadow-sm border-0 rounded-3 hide-on-print" style="grid-column: 1 / -1;">
+                    <i class="bi bi-info-circle-fill me-2 text-primary"></i> No Book QR codes generated yet.
                 </div>
                 {% endfor %}
             </div>
@@ -523,9 +543,9 @@
                 </div>
             </div>
 
-            <div class="row mb-5" id="student-container">
+            <div class="qr-grid-container mb-5" id="student-container">
                 {% for s in students %}
-                <div class="col-md-3 col-sm-6 mb-4 qr-box" data-course="{{ s.course }}" data-dept="{{ s.dept }}" data-sem="{{ s.semester }}">
+                <div class="qr-box" data-course="{{ s.course }}" data-dept="{{ s.dept }}" data-sem="{{ s.semester }}">
                     <div class="qr-card">
                         
                         <!-- Task 2: Pushed safely inside card boundaries via position: absolute; top: 12px; left: 12px; margin: 0; -->
@@ -539,10 +559,8 @@
                     </div>
                 </div>
                 {% else %}
-                <div class="col-12 hide-on-print">
-                    <div class="alert bg-white text-muted shadow-sm border-0 rounded-3">
-                        <i class="bi bi-info-circle-fill me-2 text-success"></i> No Student QR codes generated yet.
-                    </div>
+                <div class="alert bg-white text-muted shadow-sm border-0 rounded-3 hide-on-print" style="grid-column: 1 / -1;">
+                    <i class="bi bi-info-circle-fill me-2 text-success"></i> No Student QR codes generated yet.
                 </div>
                 {% endfor %}
             </div>
