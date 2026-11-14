@@ -218,7 +218,7 @@
         }
 
         /* Inputs & Buttons */
-        input.form-control, select.form-select {
+        input.form-control {
             background-color: #f3f4f7;
             border: 2px solid transparent;
             padding: 10px 15px;
@@ -226,6 +226,17 @@
             transition: all 0.3s ease;
             font-size: 0.95rem;
             color: #495057;
+        }
+        select.form-select {
+            background-color: #f3f4f7;
+            border: 2px solid transparent;
+            padding: 10px 2.25rem 10px 15px !important;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            color: #495057;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         input.form-control:focus, select.form-select:focus {
             background-color: #fff;
@@ -463,29 +474,29 @@
 
             <!-- Task 3 / Issues 9 & 12: Filter Row with 0.9rem labels and mb-2 vertical spacing -->
             <div class="glass-panel hide-on-print">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
+                <div class="row g-3 gy-3 align-items-end">
+                    <div class="col-12 col-md-3">
                         <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-search me-1"></i> Search ID</label>
                         <input type="text" id="qr-search-input" class="form-control" placeholder="Search Book QRcode by ID...">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-mortarboard-fill me-1"></i> Filter Course</label>
-                        <select id="filter-course" class="form-select">
+                        <select id="filter-course" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;">
                             <option value="All">All Courses</option>
                             <option value="B.Tech">B.Tech</option>
                             <option value="M.Tech">M.Tech</option>
                             <option value="Diploma">Diploma</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-building me-1"></i> Filter Dept</label>
-                        <select id="filter-dept" class="form-select">
+                        <select id="filter-dept" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;">
                             <option value="All">All Departments</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="text-secondary fw-bold mb-2" style="font-size: 0.9rem;"><i class="bi bi-calendar3 me-1"></i> Filter Sem</label>
-                        <select id="filter-sem" class="form-select">
+                        <select id="filter-sem" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;">
                             <option value="All">All Semesters</option>
                         </select>
                     </div>
