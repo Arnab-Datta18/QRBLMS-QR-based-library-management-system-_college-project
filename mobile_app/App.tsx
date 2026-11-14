@@ -9,6 +9,7 @@ import { useFonts, PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakar
 LogBox.ignoreLogs(['[expo-notifications]', 'expo-notifications']);
 
 import Login from './screens/Login';
+import Splash from './screens/Splash';
 import Home from './screens/Home';
 import Academics from './screens/Academics';
 import Borrowed from './screens/Borrowed';
@@ -156,7 +157,14 @@ function MainTabs({ navigation }: any) {
 export default function App() {
   return (
     <NavigationContainer theme={DefaultTheme}>
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="Splash">
+        {/* Animated Splash Screen */}
+        <Stack.Screen
+          name="Splash"
+          component={Splash}
+          options={{ headerShown: false }}
+        />
+
         {/* Login Screen (No Header) */}
         <Stack.Screen
           name="Login"
