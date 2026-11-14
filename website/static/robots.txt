@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://qrblms.pythonanywhere.com/sitemap.xml

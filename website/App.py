@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
@@ -64,6 +64,14 @@ def create_app():
         if is_api_request():
             return jsonify({"error": "Internal Server Error", "message": "An unexpected error occurred."}), 500
         return "<h1>500 Internal Server Error</h1><p>An unexpected error occurred. Please try again later.</p>", 500
+
+    @app.route('/robots.txt')
+    def robots_txt():
+        return send_from_directory(app.static_folder, 'robots.txt')
+
+    @app.route('/sitemap.xml')
+    def sitemap_xml():
+        return send_from_directory(app.static_folder, 'sitemap.xml')
 
     return app
 
