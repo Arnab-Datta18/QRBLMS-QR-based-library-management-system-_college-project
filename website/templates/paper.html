@@ -365,7 +365,7 @@
         }
 
         /* Inputs & Buttons */
-        input.form-control, select.form-select {
+        input.form-control {
             background-color: #f3f4f7;
             border: 2px solid transparent;
             padding: 10px 15px;
@@ -373,6 +373,17 @@
             transition: all 0.3s ease;
             font-size: 0.95rem;
             color: #495057;
+        }
+        select.form-select {
+            background-color: #f3f4f7;
+            border: 2px solid transparent;
+            padding: 10px 2.25rem 10px 15px !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            color: #495057;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         input.form-control:focus, select.form-select:focus {
             background-color: #fff;
@@ -547,7 +558,7 @@
                 <form action="{{ url_for('web.upload_paper') }}" method="POST" enctype="multipart/form-data">
                     <div class="row g-3 gy-3 align-items-center">
                         <div class="col-12 col-md-2">
-                            <select name="course" id="courseSelect" class="form-select" required>
+                            <select name="course" id="courseSelect" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;" required>
                                 <option value="" disabled selected>Course</option>
                                 <option value="Diploma">Diploma</option>
                                 <option value="B.Tech">B.Tech</option>
@@ -555,12 +566,12 @@
                             </select>
                         </div>
                         <div class="col-12 col-md-2">
-                            <select name="dept" id="deptSelect" class="form-select" required>
+                            <select name="dept" id="deptSelect" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;" required>
                                 <option value="" disabled selected>Department</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-2">
-                            <select name="sem" id="semSelect" class="form-select" required>
+                            <select name="sem" id="semSelect" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;" required>
                                 <option value="" disabled selected>Semester</option>
                             </select>
                         </div>
