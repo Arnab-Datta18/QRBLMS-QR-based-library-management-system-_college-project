@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Easing, Image, StatusBar, Dimensions } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Hold native splash screen while JS bundle loads
+SplashScreen.preventAutoHideAsync();
 
 const { width } = Dimensions.get('window');
 const LOGO_SIZE = Math.min(width * 0.72, 280);
@@ -8,16 +12,26 @@ export default function Splash({ navigation }: any) {
   const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Loop rotation animation over 2000ms with linear easing
+    // Loop rotation animation over 8000ms with linear easing
     const animation = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
-        duration: 2000,
+        duration: 8000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
     );
-    animation.start();
+
+    const initSplash = async () => {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        console.warn('Error hiding native splash:', e);
+      }
+      animation.start();
+    };
+
+    initSplash();
 
     // Timer that waits 3000ms, then navigates to Login
     const timer = setTimeout(() => {
