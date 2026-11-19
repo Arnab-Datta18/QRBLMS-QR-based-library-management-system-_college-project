@@ -172,9 +172,23 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
+    let isMounted = true;
+    async function hideSplash() {
+      if (fontsLoaded) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        if (isMounted) {
+          try {
+            await SplashScreen.hideAsync();
+          } catch (e) {
+            console.warn('Error hiding splash screen:', e);
+          }
+        }
+      }
     }
+    hideSplash();
+    return () => {
+      isMounted = false;
+    };
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
