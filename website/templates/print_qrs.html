@@ -384,23 +384,145 @@
 
         /* --- PRINT STYLES --- */
         @media print {
-            body { background: white !important; }
-            body * { visibility: hidden; }
-            .print-container, .print-container * { visibility: visible; }
-            .print-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-            .hide-on-print { display: none !important; }
-            .qr-grid-container {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 15px !important;
-                width: 100% !important;
+            @page {
+                size: auto;
+                margin: 8mm 6mm;
             }
-            .qr-box { break-inside: avoid; page-break-inside: avoid; margin-bottom: 20px; }
-            .exclude-from-print { display: none !important; }
-            
-            /* Clean up cards for printing */
-            .qr-card { border: 1px solid #000 !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; }
-            .qr-image { max-width: 100%; }
+
+            /* 1. Global Reset & Unclip Ancestors */
+            html, body {
+                overflow: visible !important;
+                overflow-x: visible !important;
+                overflow-y: visible !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* 2. Hide Non-Print Elements */
+            .hide-on-print,
+            .exclude-from-print,
+            .bg-shape,
+            .mobile-topbar,
+            .sidebar,
+            .sidebar-backdrop,
+            .sidebar-footer {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* 3. Reset Layout Containers to Natural Multi-Page Flow */
+            .dashboard-container {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+
+            .main-content,
+            .print-container {
+                display: block !important;
+                position: static !important;
+                float: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                overflow-x: visible !important;
+                overflow-y: visible !important;
+            }
+
+            /* 4. Print-Friendly Multi-Page Flow (Avoid CSS Grid pagination bug) */
+            .qr-grid-container {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                margin: 0 0 10px 0 !important;
+                padding: 0 !important;
+                text-align: left !important;
+            }
+
+            /* 5. Individual QR Item Box (4 per row in print, unbreakable across pages) */
+            .qr-box {
+                display: inline-block !important;
+                vertical-align: top !important;
+                width: 23% !important;
+                margin: 0 1% 14px 1% !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+            }
+
+            /* 6. Individual QR Card Styling */
+            .qr-card {
+                display: block !important;
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                border: 1px solid #222222 !important;
+                border-radius: 6px !important;
+                padding: 8px 6px !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                box-shadow: none !important;
+                text-align: center !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+                transform: none !important;
+            }
+
+            .qr-title {
+                font-size: 0.85rem !important;
+                font-weight: 700 !important;
+                color: #000000 !important;
+                margin: 0 0 6px 0 !important;
+                padding: 0 !important;
+                line-height: 1.2 !important;
+                word-break: break-all !important;
+            }
+
+            .qr-image {
+                display: block !important;
+                width: 100% !important;
+                max-width: 130px !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                border: 1px solid #dddddd !important;
+                padding: 2px !important;
+                background: #ffffff !important;
+                border-radius: 4px !important;
+            }
         }
     </style>
 </head>
@@ -663,9 +785,11 @@
             allBoxes.forEach(box => {
                 let cb = box.querySelector('.qr-checkbox');
                 let isChecked = cb ? cb.checked : false;
-                if (!isChecked) {
+                // Exclude unchecked items or items hidden by search/filter
+                if (!isChecked || box.style.display === "none") {
                     box.classList.add('exclude-from-print');
                 } else {
+                    box.classList.remove('exclude-from-print');
                     selectedCount++;
                 }
             });
@@ -676,12 +800,25 @@
                 return;
             }
 
-            // Triggers Browser Print Dialog
-            window.print();
+            let cleanupDone = false;
+            const cleanup = () => {
+                if (cleanupDone) return;
+                cleanupDone = true;
+                allBoxes.forEach(box => {
+                    box.classList.remove('exclude-from-print');
+                });
+                window.removeEventListener('afterprint', cleanup);
+            };
 
-            // Resets view after print dialog closes
-            allBoxes.forEach(box => {
-                box.classList.remove('exclude-from-print');
+            window.addEventListener('afterprint', cleanup);
+
+            // Allow DOM updates to settle before capturing print preview
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    window.print();
+                    // Fallback cleanup if afterprint does not fire on certain mobile webviews
+                    setTimeout(cleanup, 1500);
+                }, 50);
             });
         }
 
