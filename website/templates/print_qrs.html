@@ -386,7 +386,7 @@
         @media print {
             @page {
                 size: auto;
-                margin: 8mm 6mm;
+                margin: 10mm 8mm;
             }
 
             /* 1. Global Reset & Unclip Ancestors */
@@ -395,7 +395,7 @@
                 overflow-x: visible !important;
                 overflow-y: visible !important;
                 height: auto !important;
-                min-height: auto !important;
+                min-height: 0 !important;
                 max-height: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -405,9 +405,8 @@
                 print-color-adjust: exact !important;
             }
 
-            /* 2. Hide Non-Print Elements */
+            /* 2. Hide Non-Print Elements & Chrome */
             .hide-on-print,
-            .exclude-from-print,
             .bg-shape,
             .mobile-topbar,
             .sidebar,
@@ -427,7 +426,7 @@
                 position: static !important;
                 width: 100% !important;
                 height: auto !important;
-                min-height: auto !important;
+                min-height: 0 !important;
                 max-height: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -444,36 +443,41 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 height: auto !important;
-                min-height: auto !important;
+                min-height: 0 !important;
                 max-height: none !important;
                 overflow: visible !important;
                 overflow-x: visible !important;
                 overflow-y: visible !important;
             }
 
-            /* 4. Print-Friendly Multi-Page Flow (Avoid CSS Grid pagination bug) */
+            /* 4. Print-Friendly Multi-Page Flow (Clean 4-column Flexbox) */
             .qr-grid-container {
-                display: block !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                justify-content: flex-start !important;
+                align-content: flex-start !important;
+                gap: 12px !important;
                 width: 100% !important;
                 height: auto !important;
-                min-height: auto !important;
+                min-height: 0 !important;
                 max-height: none !important;
                 overflow: visible !important;
-                margin: 0 0 10px 0 !important;
+                margin: 0 0 12px 0 !important;
                 padding: 0 !important;
-                text-align: left !important;
             }
 
-            /* 5. Individual QR Item Box (4 per row in print, unbreakable across pages) */
+            /* 5. Individual QR Item Box (4 columns per row, edge-to-edge, unbreakable across pages) */
             .qr-box {
-                display: inline-block !important;
-                vertical-align: top !important;
-                width: 23% !important;
-                margin: 0 1% 14px 1% !important;
-                padding: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                flex: 0 0 calc((100% - 36px) / 4) !important;
+                width: calc((100% - 36px) / 4) !important;
+                max-width: calc((100% - 36px) / 4) !important;
                 box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 height: auto !important;
-                min-height: auto !important;
+                min-height: 0 !important;
                 max-height: none !important;
                 overflow: visible !important;
                 page-break-inside: avoid !important;
@@ -481,13 +485,46 @@
                 -webkit-column-break-inside: avoid !important;
             }
 
-            /* 6. Individual QR Card Styling */
+            /* 6. Strictly Collapse & Remove Excluded / Unchecked Cards (Higher specificity to prevent blank ghost pages) */
+            .qr-box.exclude-from-print,
+            .qr-box:has(.qr-checkbox:not(:checked)),
+            .qr-box[style*="display: none"],
+            .exclude-from-print {
+                display: none !important;
+                visibility: hidden !important;
+                position: absolute !important;
+                width: 0 !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+                clip: rect(0, 0, 0, 0) !important;
+            }
+
+            /* 7. Hide Grid Containers with no selected cards */
+            .qr-grid-container:not(:has(.qr-box:not(.exclude-from-print):has(.qr-checkbox:checked))),
+            .qr-grid-container.exclude-from-print {
+                display: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 0 !important;
+                min-height: 0 !important;
+            }
+
+            /* 8. Individual QR Card Styling */
             .qr-card {
-                display: block !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                align-items: center !important;
                 position: relative !important;
                 width: 100% !important;
                 height: auto !important;
-                min-height: auto !important;
+                min-height: 0 !important;
                 max-height: none !important;
                 border: 1px solid #222222 !important;
                 border-radius: 6px !important;
@@ -500,6 +537,7 @@
                 break-inside: avoid !important;
                 -webkit-column-break-inside: avoid !important;
                 transform: none !important;
+                box-sizing: border-box !important;
             }
 
             .qr-title {
@@ -515,7 +553,7 @@
             .qr-image {
                 display: block !important;
                 width: 100% !important;
-                max-width: 130px !important;
+                max-width: 125px !important;
                 height: auto !important;
                 margin: 0 auto !important;
                 border: 1px solid #dddddd !important;
@@ -800,6 +838,17 @@
                 return;
             }
 
+            // Hide containers that have no printable cards
+            const containers = document.querySelectorAll('.qr-grid-container');
+            containers.forEach(container => {
+                const hasPrintable = container.querySelector('.qr-box:not(.exclude-from-print)');
+                if (!hasPrintable) {
+                    container.classList.add('exclude-from-print');
+                } else {
+                    container.classList.remove('exclude-from-print');
+                }
+            });
+
             let cleanupDone = false;
             const cleanup = () => {
                 if (cleanupDone) return;
@@ -807,17 +856,22 @@
                 allBoxes.forEach(box => {
                     box.classList.remove('exclude-from-print');
                 });
+                containers.forEach(container => {
+                    container.classList.remove('exclude-from-print');
+                });
                 window.removeEventListener('afterprint', cleanup);
+                window.removeEventListener('focus', cleanup);
             };
 
-            window.addEventListener('afterprint', cleanup);
+            window.addEventListener('afterprint', cleanup, { once: true });
+            window.addEventListener('focus', cleanup, { once: true });
 
             // Allow DOM updates to settle before capturing print preview
             requestAnimationFrame(() => {
                 setTimeout(() => {
                     window.print();
-                    // Fallback cleanup if afterprint does not fire on certain mobile webviews
-                    setTimeout(cleanup, 1500);
+                    // Fallback safety cleanup (60s) in case mobile webviews do not fire afterprint or focus
+                    setTimeout(cleanup, 60000);
                 }, 50);
             });
         }
