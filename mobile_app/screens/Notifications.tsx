@@ -26,6 +26,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from '../api/client';
+import { NotificationsSkeleton, ErrorState, withMinimumDelay } from '../components/Skeleton';
 
 // Color tokens strictly adhering to TCEA Library Design Spec
 const C = {
@@ -226,27 +227,35 @@ export default function NotificationsScreen({ navigation: propNav }: any) {
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_DATA);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const [studentId, setStudentId] = useState<string>('');
 
   const unreadCount = notifications.filter(n => n.unread).length;
   const shown = filter === 'unread' ? notifications.filter(n => n.unread) : notifications;
 
-
-
   const fetchLiveNotifications = useCallback(async (sid?: string) => {
     try {
+      setLoading(true);
+      setError(null);
       const activeSid = sid || studentId || (await getStudentId());
-      if (!activeSid) return;
+      if (!activeSid) {
+        setError('No student identity found. Please log in.');
+        return;
+      }
       if (!studentId) setStudentId(activeSid);
 
-      const res = await getNotifications(activeSid);
+      const res = await withMinimumDelay(getNotifications(activeSid), 2600);
       if (res && res.notifications && Array.isArray(res.notifications)) {
         setNotifications(res.notifications);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Failed to fetch live notifications:', err);
+      setError(err?.response?.data?.message || err?.message || 'Unable to connect to notification services. Please check your network.');
+    } finally {
+      setLoading(false);
     }
   }, [studentId]);
 
@@ -301,8 +310,23 @@ export default function NotificationsScreen({ navigation: propNav }: any) {
     }
   };
 
-  if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: C.surface }} />;
+  // 1. Initial skeleton loading state
+  if (!fontsLoaded || (loading && !refreshing && notifications === INITIAL_DATA && !error)) {
+    return <NotificationsSkeleton />;
+  }
+
+  // 2. Error state with retry
+  if (error && notifications.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.surface, justifyContent: 'center' }}>
+        <StatusBar barStyle="light-content" />
+        <ErrorState
+          title="Notifications Offline"
+          message={error}
+          onRetry={() => fetchLiveNotifications()}
+        />
+      </View>
+    );
   }
 
   return (

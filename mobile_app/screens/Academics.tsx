@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, StatusBar, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, StatusBar, Alert, Platform, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { getPyqs, baseURL } from '../api/client';
 import { getStudentId } from '../api/auth';
+import { AcademicsSkeleton, ErrorState, withMinimumDelay } from '../components/Skeleton';
 
 const C = {
   primary: '#C81E27', tertiary: '#E0533C', navy: '#0B2C4D', navyDeep: '#071B31',
@@ -26,17 +27,23 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [papers, setPapers] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPYQs = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const studentId = await getStudentId();
-      if (!studentId) return;
+      if (!studentId) {
+        setError('No student identity found. Please log in.');
+        return;
+      }
 
-      const response = await getPyqs(studentId);
-      setPapers(response.pyqs || []);
-    } catch (error) {
-      console.error(error);
+      const response = await withMinimumDelay(getPyqs(studentId), 2600);
+      setPapers(response?.pyqs || []);
+    } catch (err: any) {
+      console.error('Academics fetch error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Unable to connect to question paper archives. Please check your network.');
     } finally {
       setLoading(false);
     }
@@ -48,7 +55,7 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
     }, [fetchPYQs])
   );
 
-  // Preserve this search filtering logic but with safe fallbacks
+  // Search filtering logic
   const list = useMemo(() => papers.filter(p =>
     ((p.title || '') + (p.subject || '')).toLowerCase().includes(query.trim().toLowerCase())
   ), [query, papers]);
@@ -78,9 +85,9 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
     try {
       const { uri } = await FileSystem.downloadAsync(url, fileUri);
       await Sharing.shareAsync(uri);
-    } catch (error) {
+    } catch (err) {
       Alert.alert('Error', 'Failed to download the PDF.');
-      console.error(error);
+      console.error(err);
     }
   };
 
@@ -98,29 +105,50 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
 
     try {
       const { uri } = await FileSystem.downloadAsync(url, fileUri);
-      
       if (Platform.OS === 'android') {
         const contentUri = await FileSystem.getContentUriAsync(uri);
         await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
           data: contentUri,
-          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+          flags: 1,
           type: 'application/pdf',
         });
       } else {
-        await Sharing.shareAsync(uri, { UTI: 'com.adobe.pdf', mimeType: 'application/pdf' });
+        await Sharing.shareAsync(uri);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to open the PDF.');
-      console.error(error);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to open the PDF viewer.');
+      console.error(err);
     }
   };
 
-  if (!loaded) return null;
+  // 1. Initial skeleton loading state
+  if (!loaded || (loading && papers.length === 0 && !error)) {
+    return <AcademicsSkeleton />;
+  }
+
+  // 2. Error state with retry
+  if (error && papers.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.surface, justifyContent: 'center' }}>
+        <StatusBar barStyle="light-content" />
+        <ErrorState
+          title="Digital Archives Offline"
+          message={error}
+          onRetry={fetchPYQs}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>
       <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={{ paddingBottom: 130 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: 130 }} 
+        showsVerticalScrollIndicator={false} 
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchPYQs} tintColor="#fff" />}
+      >
         {/* Colourful header */}
         <LinearGradient colors={[C.navyDeep, C.navy, '#1B4A7A']} style={[s.header, { paddingTop: insets.top + 12 }]}>
           <View style={[s.blob, { width: 220, height: 220, top: -70, right: -60, backgroundColor: C.primary, opacity: 0.35 }]} />
@@ -179,11 +207,7 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
           <View style={s.count}><Text style={s.countText}>{list.length} Listed</Text></View>
         </View>
 
-        {loading && papers.length === 0 ? (
-          <View style={{ padding: 40, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={C.primary} />
-          </View>
-        ) : list.length === 0 ? (
+        {list.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="document-text-outline" size={36} color="#9AA3B5" />
             <Text style={s.emptyText}>No papers found. Try a different search.</Text>

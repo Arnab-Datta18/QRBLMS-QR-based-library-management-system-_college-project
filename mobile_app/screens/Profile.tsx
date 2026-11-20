@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ import { JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 
 import { getDashboard, changePassword, getFullImageUrl, uploadAvatar } from '../api/client';
 import { getStudentId, clearTokens } from '../api/auth';
+import { ProfileSkeleton, ErrorState, withMinimumDelay } from '../components/Skeleton';
 
 const C = {
   primary: '#C81E27',
@@ -82,20 +84,26 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [submittingPassword, setSubmittingPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const studentId = await getStudentId();
-      if (!studentId) return;
-      const res = await getDashboard(studentId);
+      if (!studentId) {
+        setError('No student identity found. Please log in.');
+        return;
+      }
+      const res = await withMinimumDelay(getDashboard(studentId), 2600);
       setData(res);
-      if (res.avatar_url || res.profile_pic_url) {
+      if (res?.avatar_url || res?.profile_pic_url) {
         const full = getFullImageUrl(res.avatar_url || res.profile_pic_url);
         setAvatarUri(full);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Profile fetch error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Unable to connect to profile services. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -277,10 +285,21 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
     );
   };
 
-  if (!fontsLoaded) {
+  // 1. Initial skeleton loader state
+  if (!fontsLoaded || (loading && !data && !error)) {
+    return <ProfileSkeleton />;
+  }
+
+  // 2. Error state with retry
+  if (error && !data) {
     return (
-      <View style={[s.loadingContainer, { backgroundColor: C.surface }]}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={[s.loadingContainer, { backgroundColor: C.surface, justifyContent: 'center' }]}>
+        <StatusBar barStyle="light-content" />
+        <ErrorState
+          title="Profile Offline"
+          message={error}
+          onRetry={fetchProfile}
+        />
       </View>
     );
   }
@@ -297,6 +316,9 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={fetchProfile} tintColor="#fff" />
+          }
         >
           {/* HEADER WITH GRADIENT & GLOW BLOBS */}
           <LinearGradient

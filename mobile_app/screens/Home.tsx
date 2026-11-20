@@ -4,11 +4,11 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  ActivityIndicator, 
   RefreshControl, 
   Pressable,
   Alert,
-  StatusBar
+  StatusBar,
+  Modal
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -20,6 +20,7 @@ import { useFonts, PlusJakartaSans_500Medium, PlusJakartaSans_700Bold, PlusJakar
 
 import { getDashboard, getCatalog } from '../api/client';
 import { getStudentId } from '../api/auth';
+import { HomeSkeleton, ErrorState, withMinimumDelay } from '../components/Skeleton';
 
 const C = {
   primary: '#C81E27', tertiary: '#E0533C',
@@ -34,15 +35,6 @@ const Chip = ({ icon, label, filled, accent }: any) => (
   </View>
 );
 
-const GradientButton = ({ label, onPress, disabled }: any) => (
-  <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [{ transform: [{ scale: pressed && !disabled ? 0.96 : 1 }], opacity: disabled ? 0.6 : 1 }]}>
-    <LinearGradient colors={disabled ? ['#E2E8F0', '#E2E8F0'] : [C.tertiary, C.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.btn}>
-      <Ionicons name="bookmark" size={15} color={disabled ? '#94A3B8' : '#fff'} />
-      <Text style={[s.btnText, disabled && { color: '#94A3B8' }]}>{label}</Text>
-    </LinearGradient>
-  </Pressable>
-);
-
 export default function Home({ navigation: propNav }: any) {
   const navigation = propNav || useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -51,22 +43,32 @@ export default function Home({ navigation: propNav }: any) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [catalog, setCatalog] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [gatepassModalVisible, setGatepassModalVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const studentId = await getStudentId();
-      if (!studentId) return;
+      if (!studentId) {
+        setError('No student identity found. Please log in.');
+        return;
+      }
 
-      const [dashboardRes, catalogRes] = await Promise.all([
-        getDashboard(studentId),
-        getCatalog(studentId)
-      ]);
+      const [dashboardRes, catalogRes] = await withMinimumDelay(
+        Promise.all([
+          getDashboard(studentId),
+          getCatalog(studentId)
+        ]),
+        2600
+      );
       
       setData(dashboardRes);
-      setCatalog(catalogRes.books || []);
-    } catch (error) {
-      console.error(error);
+      setCatalog(catalogRes?.books || []);
+    } catch (err: any) {
+      console.error('Home fetch error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Unable to connect to library servers. Please check your network.');
     } finally {
       setLoading(false);
     }
@@ -78,20 +80,27 @@ export default function Home({ navigation: propNav }: any) {
     }, [fetchData])
   );
 
+  // 1. Show skeleton while fonts are loading or during initial data load
   if (!fontsLoaded || (loading && !data)) {
+    return <HomeSkeleton />;
+  }
+
+  // 2. Show error state with retry if data load failed
+  if (error && !data) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.surface }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: C.surface, justifyContent: 'center' }}>
+        <StatusBar barStyle="light-content" />
+        <ErrorState
+          title="Dashboard Offline"
+          message={error}
+          onRetry={fetchData}
+        />
       </View>
     );
   }
 
   if (!data) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.surface }}>
-        <Text style={{ fontFamily: 'PlusJakartaSans_700Bold', color: C.neutral }}>Error loading dashboard.</Text>
-      </View>
-    );
+    return <HomeSkeleton />;
   }
 
   // Calculate next due date string
@@ -121,7 +130,7 @@ export default function Home({ navigation: propNav }: any) {
   const handleCopyId = async () => {
     if (data?.student_id) {
       await Clipboard.setStringAsync(data.student_id);
-      Alert.alert('Success', 'ID Copied to Clipboard');
+      Alert.alert('Success', 'Student ID copied to clipboard');
     }
   };
 
@@ -180,28 +189,47 @@ export default function Home({ navigation: propNav }: any) {
             </View>
           </ScrollView>
 
-          {/* Pass card */}
+          {/* Pass card with expansion affordance */}
           <LinearGradient colors={['#FFFFFF', '#F3F5FF']} style={s.pass}>
-            <View style={s.passHead}>
-              <View style={s.passIcon}><Ionicons name="id-card-outline" size={20} color="#fff" /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.passTitle}>TCEA Digital Library Pass</Text>
-                <Text style={s.passSub}>Verified institutional gatepass</Text>
+            <Pressable 
+              onPress={() => setGatepassModalVisible(true)}
+              style={({ pressed }) => [{ width: '100%', alignItems: 'center' }, pressed && { opacity: 0.92 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Tap to expand Digital Library Pass"
+            >
+              <View style={s.passHead}>
+                <View style={s.passIcon}><Ionicons name="id-card-outline" size={20} color="#fff" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.passTitle}>TCEA Digital Library Pass</Text>
+                  <Text style={s.passSub}>Verified institutional gatepass</Text>
+                </View>
+                <View style={s.active}><Text style={s.activeText}>Active</Text></View>
               </View>
-              <View style={s.active}><Text style={s.activeText}>Active</Text></View>
-            </View>
 
-            <LinearGradient colors={[C.primary, C.tertiary, C.navy]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.qrFrame}>
-              <View style={s.qrInner}>
-                <QRCode value={data.qr_payload || data.student_id || 'INVALID'} size={150} color={C.neutral} backgroundColor="#fff" />
-              </View>
-            </LinearGradient>
+              <LinearGradient colors={[C.primary, C.tertiary, C.navy]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.qrFrame}>
+                <View style={s.qrInner}>
+                  <QRCode value={data.qr_payload || data.student_id || 'INVALID'} size={150} color={C.neutral} backgroundColor="#fff" />
+                </View>
+              </LinearGradient>
+            </Pressable>
 
-            <Pressable style={({ pressed }) => [s.idPill, pressed && { opacity: 0.7 }]} onPress={handleCopyId}>
+            {/* Independent one-tap Student ID copy button */}
+            <Pressable 
+              style={({ pressed }) => [s.idPill, pressed && { opacity: 0.7 }]} 
+              onPress={handleCopyId}
+              accessibilityRole="button"
+              accessibilityLabel="Copy Student ID"
+            >
               <Text style={s.idText}>{data.student_id}</Text>
               <Ionicons name="copy-outline" size={16} color={C.navy} />
             </Pressable>
-            <Text style={s.hint}>Tap to expand or scan at library terminal</Text>
+
+            <Pressable 
+              onPress={() => setGatepassModalVisible(true)}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            >
+              <Text style={s.hint}>Tap to expand or scan at library terminal</Text>
+            </Pressable>
           </LinearGradient>
         </LinearGradient>
 
@@ -230,7 +258,7 @@ export default function Home({ navigation: propNav }: any) {
           </View>
         </View>
 
-        {/* Dynamic Books Mapping */}
+        {/* Dynamic Books Section */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>Available books for you</Text>
           <View style={s.count}><Text style={s.countText}>{catalog.length}</Text></View>
@@ -247,7 +275,6 @@ export default function Home({ navigation: propNav }: any) {
         ) : (
           catalog.slice(0, 5).map((book, index) => {
             const isAvailable = book.is_in_stock;
-            // Cycle through vibrant colors for the spine
             const spineColors = [C.primary, '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
             const spineColor = spineColors[index % spineColors.length];
             
@@ -267,12 +294,19 @@ export default function Home({ navigation: propNav }: any) {
                   <Text style={s.bookTitle} numberOfLines={1}>{book.title}</Text>
                   <Text style={s.author} numberOfLines={1}>{book.author}</Text>
                   
+                  {/* Informational book footer (Reservation button removed) */}
                   <View style={s.bookBottom}>
                     <Text style={s.ref}>Ref: {book.book_id}</Text>
-                    <GradientButton 
-                      label="Reserve" 
-                      disabled={!isAvailable}
-                    />
+                    <View style={[s.infoBadge, isAvailable ? { backgroundColor: '#E8F5E9' } : { backgroundColor: '#F3F4F6' }]}>
+                      <Ionicons 
+                        name={isAvailable ? "checkmark-circle" : "close-circle"} 
+                        size={14} 
+                        color={isAvailable ? C.mintText : '#6B7280'} 
+                      />
+                      <Text style={[s.infoBadgeText, isAvailable ? { color: C.mintText } : { color: '#6B7280' }]}>
+                        {isAvailable ? 'In Stack' : 'Checked Out'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -280,6 +314,80 @@ export default function Home({ navigation: propNav }: any) {
           })
         )}
       </ScrollView>
+
+      {/* Expanded High-Brightness Gatepass Modal */}
+      <Modal
+        visible={gatepassModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGatepassModalVisible(false)}
+        statusBarTranslucent
+      >
+        <View style={s.gatepassOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setGatepassModalVisible(false)} />
+          <View style={s.gatepassCard}>
+            <View style={s.gatepassTop}>
+              <View style={s.passIcon}>
+                <Ionicons name="id-card-outline" size={20} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.gatepassTitle}>TCEA Digital Library Pass</Text>
+                <Text style={s.gatepassSub}>Verified Institutional Gatepass</Text>
+              </View>
+              <Pressable 
+                onPress={() => setGatepassModalVisible(false)} 
+                style={({ pressed }) => [s.gatepassCloseBtn, pressed && { opacity: 0.7 }]}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={22} color={C.neutral} />
+              </Pressable>
+            </View>
+
+            <View style={s.gatepassStudentInfo}>
+              <Text style={s.gatepassName}>{data?.student_name || 'Student'}</Text>
+              <Text style={s.gatepassId}>ID: {data?.student_id}</Text>
+              <View style={s.gatepassBadges}>
+                <View style={s.gatepassBadge}>
+                  <Text style={s.gatepassBadgeText}>{data?.course || 'Course'}</Text>
+                </View>
+                <View style={s.gatepassBadge}>
+                  <Text style={s.gatepassBadgeText}>{data?.department || 'Dept'}</Text>
+                </View>
+                <View style={[s.gatepassBadge, { backgroundColor: C.mint }]}>
+                  <Text style={[s.gatepassBadgeText, { color: C.mintText }]}>Sem {data?.semester || '-'}</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* High-Contrast Large QR Container */}
+            <View style={s.gatepassQrContainer}>
+              <View style={s.gatepassQrInner}>
+                <QRCode 
+                  value={data?.qr_payload || data?.student_id || 'INVALID'} 
+                  size={220} 
+                  color="#000000" 
+                  backgroundColor="#FFFFFF" 
+                />
+              </View>
+              <View style={s.highBrightnessPill}>
+                <Ionicons name="sunny-outline" size={14} color="#D97706" />
+                <Text style={s.highBrightnessText}>High-Contrast Gatepass QR</Text>
+              </View>
+            </View>
+
+            <Text style={s.gatepassFooterHint}>
+              Present this high-brightness QR code directly under the library entrance turnstile or scanner terminal.
+            </Text>
+
+            <Pressable 
+              style={({ pressed }) => [s.gatepassDoneBtn, pressed && { opacity: 0.9 }]}
+              onPress={() => setGatepassModalVisible(false)}
+            >
+              <Text style={s.gatepassDoneText}>Done</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -328,6 +436,25 @@ const s = StyleSheet.create({
   author: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, color: '#6B7280', paddingHorizontal: 14, marginTop: 2 },
   bookBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, paddingTop: 12 },
   ref: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12.5, color: '#6B7280' },
-  btn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999, shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  btnText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13.5, color: '#fff' },
+  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  infoBadgeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 },
+  gatepassOverlay: { flex: 1, backgroundColor: 'rgba(7, 27, 49, 0.78)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  gatepassCard: { backgroundColor: '#FFFFFF', borderRadius: 32, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center', ...shadow, shadowRadius: 30 },
+  gatepassTop: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginBottom: 16 },
+  gatepassTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 15, color: C.neutral },
+  gatepassSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#6B7280' },
+  gatepassCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+  gatepassStudentInfo: { alignItems: 'center', width: '100%', marginBottom: 16 },
+  gatepassName: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 20, color: C.neutral, textAlign: 'center' },
+  gatepassId: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13, color: C.navy, letterSpacing: 1, marginTop: 2 },
+  gatepassBadges: { flexDirection: 'row', gap: 6, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' },
+  gatepassBadge: { backgroundColor: '#E6EAF8', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  gatepassBadgeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, color: C.navy },
+  gatepassQrContainer: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 24, borderWidth: 2, borderColor: '#EEF1FB', alignItems: 'center', ...shadow, shadowOpacity: 0.06 },
+  gatepassQrInner: { padding: 8, backgroundColor: '#FFFFFF', borderRadius: 16 },
+  highBrightnessPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFBEB', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, marginTop: 10 },
+  highBrightnessText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5, color: '#D97706' },
+  gatepassFooterHint: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 16, lineHeight: 18, paddingHorizontal: 10 },
+  gatepassDoneBtn: { backgroundColor: C.navy, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', marginTop: 18 },
+  gatepassDoneText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15, color: '#FFFFFF' },
 });

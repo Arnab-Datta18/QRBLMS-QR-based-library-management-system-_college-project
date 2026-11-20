@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, StatusBar, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, StatusBar, RefreshControl, Alert, Modal } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useFonts, PlusJakartaSans_500Medium, PlusJakartaSans_700Bold, PlusJakar
 
 import { getDashboard, getHistory } from '../api/client';
 import { getStudentId } from '../api/auth';
+import { BorrowedSkeleton, ErrorState, withMinimumDelay } from '../components/Skeleton';
 
 const C = {
   primary: '#C81E27', tertiary: '#E0533C', navy: '#0B2C4D', navyDeep: '#071B31',
@@ -51,24 +52,34 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
   const [loading, setLoading] = useState(true);
   const [activeIssues, setActiveIssues] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [qrData, setQrData] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const studentId = await getStudentId();
-      if (!studentId) return;
+      if (!studentId) {
+        setError('No student identity found. Please log in.');
+        return;
+      }
 
-      const [dashboardRes, historyRes] = await Promise.all([
-        getDashboard(studentId),
-        getHistory(studentId)
-      ]);
+      const [dashboardRes, historyRes] = await withMinimumDelay(
+        Promise.all([
+          getDashboard(studentId),
+          getHistory(studentId)
+        ]),
+        2600
+      );
       
-      setActiveIssues(dashboardRes.active_issues || []);
-      setHistory(historyRes.history || []);
-    } catch (error) {
-      console.error(error);
+      setActiveIssues(dashboardRes?.active_issues || []);
+      setHistory(historyRes?.history || []);
+    } catch (err: any) {
+      console.error('Borrowed fetchData error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Unable to load loan records. Please check your network.');
     } finally {
       setLoading(false);
     }
@@ -80,12 +91,9 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
     }, [fetchData])
   );
 
+  // Leave loan renewal handler as-is for upcoming renewal request + librarian approval flow
   const handleRenew = (bookId: string) => {
     Alert.alert('Renew Loan', `API handler for renewing book ${bookId} not implemented yet.`);
-  };
-
-  const handleClearFine = (bookId: string) => {
-    Alert.alert('Clear Fine', `API handler for clearing fine on book ${bookId} not implemented yet.`);
   };
 
   const handleQR = (qrString: string) => {
@@ -93,10 +101,28 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
     setQrModalVisible(true);
   };
 
-  if (!loaded) return null;
+  // 1. Initial skeleton loading state
+  if (!loaded || (loading && activeIssues.length === 0 && history.length === 0 && !error)) {
+    return <BorrowedSkeleton />;
+  }
+
+  // 2. Error state with retry
+  if (error && activeIssues.length === 0 && history.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.surface, justifyContent: 'center' }}>
+        <StatusBar barStyle="light-content" />
+        <ErrorState
+          title="Loans Offline"
+          message={error}
+          onRetry={fetchData}
+        />
+      </View>
+    );
+  }
 
   const activeLoans = activeIssues.filter(item => !item.is_overdue);
   const overdueLoans = activeIssues.filter(item => item.is_overdue);
+  const displayedHistory = showAllHistory ? history : history.slice(0, 3);
 
   const calculateDaysLate = (dueDateStr: string) => {
     if (!dueDateStr) return 1;
@@ -184,118 +210,128 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
           <Text style={s.sectionTitle}>Currently borrowed</Text>
         </View>
 
-        {loading && activeIssues.length === 0 ? (
-          <ActivityIndicator size="large" color={C.primary} style={{ marginTop: 20 }} />
-        ) : (
-          <>
-            {activeLoans.map((item, index) => {
-              const daysLeft = calculateDaysLeft(item.due_date);
-              const progress = calculateProgress(item.issue_date, item.due_date);
-              
-              return (
-                <View key={item.issue_id || item.book_id || index} style={s.card}>
-                  <View style={{ flexDirection: 'row', width: '100%' }}>
-                    <View style={[s.spine, { backgroundColor: C.green }]} />
-                    <View style={[s.cardBody, { flex: 1, width: undefined }]}>
-                      <View style={s.cardTop}>
-                      <Pill bg={C.mint} color={C.mintText} dot>Active</Pill>
-                    </View>
-                    <Text style={s.bookTitle}>{item.book_name || item.title || 'Unknown Title'}</Text>
-                    <Text style={s.author}>{item.author || 'Unknown Author'}</Text>
-                    <DateBox issued={item.issue_date || 'Unknown'} due={item.due_date || 'Unknown'} />
-
-                    <View style={s.progressHead}>
-                      <Text style={s.progressText}>Loan duration: {daysLeft} days remaining</Text>
-                      <Text style={[s.progressText, { color: C.mintText }]}>Due next week</Text>
-                    </View>
-                    <View style={s.track}>
-                      <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[s.fill, { width: `${progress}%` }]} />
-                    </View>
-
-                    <View style={s.btnRow}>
-                      <Pressable style={({ pressed }) => [s.renew, pressed && { backgroundColor: C.pale }]} onPress={() => handleRenew(item.issue_id || item.book_id)}>
-                        <Ionicons name="refresh" size={18} color={C.neutral} />
-                        <Text style={s.renewText}>Renew Loan</Text>
-                      </Pressable>
-                      <Pressable style={({ pressed }) => [s.qrBtn, pressed && { transform: [{ scale: 0.94 }] }]} onPress={() => handleQR(item.qr_code_string)}>
-                        <Ionicons name="qr-code-outline" size={22} color="#fff" />
-                      </Pressable>
-                    </View>
+        {activeLoans.map((item, index) => {
+          const daysLeft = calculateDaysLeft(item.due_date);
+          const progress = calculateProgress(item.issue_date, item.due_date);
+          
+          return (
+            <View key={item.issue_id || item.book_id || index} style={s.card}>
+              <View style={{ flexDirection: 'row', width: '100%' }}>
+                <View style={[s.spine, { backgroundColor: C.green }]} />
+                <View style={[s.cardBody, { flex: 1, width: undefined }]}>
+                  <View style={s.cardTop}>
+                    <Pill bg={C.mint} color={C.mintText} dot>Active</Pill>
                   </View>
+                  <Text style={s.bookTitle}>{item.book_name || item.title || 'Unknown Title'}</Text>
+                  <Text style={s.author}>{item.author || 'Unknown Author'}</Text>
+                  <DateBox issued={item.issue_date || 'Unknown'} due={item.due_date || 'Unknown'} />
+
+                  <View style={s.progressHead}>
+                    <Text style={s.progressText}>Loan duration: {daysLeft} days remaining</Text>
+                    <Text style={[s.progressText, { color: C.mintText }]}>Due next week</Text>
+                  </View>
+                  <View style={s.track}>
+                    <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[s.fill, { width: `${progress}%` }]} />
+                  </View>
+
+                  <View style={s.btnRow}>
+                    <Pressable style={({ pressed }) => [s.renew, pressed && { backgroundColor: C.pale }]} onPress={() => handleRenew(item.issue_id || item.book_id)}>
+                      <Ionicons name="refresh" size={18} color={C.neutral} />
+                      <Text style={s.renewText}>Renew Loan</Text>
+                    </Pressable>
+                    <Pressable style={({ pressed }) => [s.qrBtn, pressed && { transform: [{ scale: 0.94 }] }]} onPress={() => handleQR(item.qr_code_string)}>
+                      <Ionicons name="qr-code-outline" size={22} color="#fff" />
+                    </Pressable>
                   </View>
                 </View>
-              );
-            })}
+              </View>
+            </View>
+          );
+        })}
 
-            {overdueLoans.map((item, index) => {
-              const daysLate = calculateDaysLate(item.due_date);
-              const fineAmount = daysLate * 5;
-              
-              return (
-                <View key={item.issue_id || item.book_id || index} style={[s.card, { borderWidth: 1.5, borderColor: '#F6C4BF' }]}>
-                  <LinearGradient colors={[C.primary, C.tertiary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.banner}>
-                    <Ionicons name="warning" size={18} color="#fff" />
-                    <Text style={s.bannerText}>OVERDUE BY {daysLate} DAYS</Text>
-                    <View style={s.late}><Text style={s.lateText}>{daysLate}d late</Text></View>
-                  </LinearGradient>
-                  <View style={s.cardBody}>
-                    <View style={s.cardTop}>
-                      <Pill bg={C.redTint} color={C.primary}>Overdue</Pill>
-                    </View>
-                    <Text style={s.bookTitle}>{item.book_name || item.title || 'Unknown Title'}</Text>
-                    <Text style={s.author}>{item.author || 'Unknown Author'}</Text>
-                    <DateBox issued={item.issue_date || 'Unknown'} due={item.due_date || 'Unknown'} dueRed />
+        {/* Overdue loans: In-person librarian desk notice instead of online pay button */}
+        {overdueLoans.map((item, index) => {
+          const daysLate = calculateDaysLate(item.due_date);
+          const fineAmount = daysLate * 5;
+          
+          return (
+            <View key={item.issue_id || item.book_id || index} style={[s.card, { borderWidth: 1.5, borderColor: '#F6C4BF' }]}>
+              <LinearGradient colors={[C.primary, C.tertiary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.banner}>
+                <Ionicons name="warning" size={18} color="#fff" />
+                <Text style={s.bannerText}>OVERDUE BY {daysLate} DAYS</Text>
+                <View style={s.late}><Text style={s.lateText}>{daysLate}d late</Text></View>
+              </LinearGradient>
+              <View style={s.cardBody}>
+                <View style={s.cardTop}>
+                  <Pill bg={C.redTint} color={C.primary}>Overdue</Pill>
+                </View>
+                <Text style={s.bookTitle}>{item.book_name || item.title || 'Unknown Title'}</Text>
+                <Text style={s.author}>{item.author || 'Unknown Author'}</Text>
+                <DateBox issued={item.issue_date || 'Unknown'} due={item.due_date || 'Unknown'} dueRed />
 
-                    <View style={s.fineBox}>
-                      <View style={s.fineIcon}><Ionicons name="cash-outline" size={22} color={C.primary} /></View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.fineTitle}>Accumulated fine</Text>
-                        <Text style={s.fineSub}>₹5 per day fine rate</Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={s.fineAmt}>₹{fineAmount}</Text>
-                        <Text style={s.finePending}>PENDING FINE</Text>
-                      </View>
-                    </View>
-
-                    <View style={s.btnRow}>
-                      <Pressable style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }]} onPress={() => handleClearFine(item.issue_id || item.book_id)}>
-                        <LinearGradient colors={[C.tertiary, C.primary, '#A5141C']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.clear}>
-                          <Ionicons name="card-outline" size={20} color="#fff" />
-                          <Text style={s.clearText}>Clear Fine & Return Book</Text>
-                        </LinearGradient>
-                      </Pressable>
-                      <Pressable style={({ pressed }) => [s.qrBtn, { backgroundColor: C.primary }, pressed && { transform: [{ scale: 0.94 }] }]} onPress={() => handleQR(item.qr_code_string)}>
-                        <Ionicons name="qr-code-outline" size={22} color="#fff" />
-                      </Pressable>
-                    </View>
+                <View style={s.fineBox}>
+                  <View style={s.fineIcon}><Ionicons name="cash-outline" size={22} color={C.primary} /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.fineTitle}>Accumulated fine</Text>
+                    <Text style={s.fineSub}>₹5 per day fine rate</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={s.fineAmt}>₹{fineAmount}</Text>
+                    <Text style={s.finePending}>PENDING FINE</Text>
                   </View>
                 </View>
-              );
-            })}
-            
-            {activeIssues.length === 0 && (
-               <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#6B7280', marginTop: 10 }}>
-                 No books currently borrowed.
-               </Text>
-            )}
-          </>
+
+                {/* In-Person Librarian Desk Notice with QR Code Action */}
+                <View style={s.btnRow}>
+                  <View style={s.deskNotice}>
+                    <Ionicons name="storefront-outline" size={18} color={C.primary} />
+                    <Text style={s.deskNoticeText}>Pay pending fine & return at Circulation Desk</Text>
+                  </View>
+                  <Pressable 
+                    style={({ pressed }) => [s.qrBtn, { backgroundColor: C.primary }, pressed && { transform: [{ scale: 0.94 }] }]} 
+                    onPress={() => handleQR(item.qr_code_string)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Show QR code for librarian"
+                  >
+                    <Ionicons name="qr-code-outline" size={22} color="#fff" />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+        
+        {activeIssues.length === 0 && (
+           <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#6B7280', marginTop: 10 }}>
+             No books currently borrowed.
+           </Text>
         )}
 
+        {/* Past loans section with Wired-Up "View all" toggle */}
         <View style={[s.sectionRow, { justifyContent: 'space-between', marginTop: 30 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={[s.sectionIcon, { backgroundColor: C.navy }]}><Ionicons name="time-outline" size={17} color="#fff" /></View>
             <Text style={s.sectionTitle}>Past loans & history</Text>
           </View>
-          <Pressable><Text style={s.viewAll}>View all ({history.length})</Text></Pressable>
+          {history.length > 0 && (
+            <Pressable 
+              onPress={() => setShowAllHistory(prev => !prev)}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={showAllHistory ? 'Show fewer historical loans' : 'View all historical loans'}
+            >
+              <Text style={s.viewAll}>
+                {showAllHistory ? 'Show less' : `View all (${history.length})`}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={[s.card, { paddingHorizontal: 16 }]}>
-          {loading && history.length === 0 ? (
-            <ActivityIndicator size="small" color={C.navy} style={{ margin: 20 }} />
-          ) : history.length > 0 ? (
-            history.map((item, index) => (
-              <View key={item.issue_id || item.book_id || index} style={[s.hRow, index !== history.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
+          {displayedHistory.length > 0 ? (
+            displayedHistory.map((item, index) => (
+              <View key={item.issue_id || item.book_id || index} style={[s.hRow, index !== displayedHistory.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
                 <View style={s.hIcon}><Ionicons name="book-outline" size={22} color={C.navy} /></View>
                 <View style={{ flex: 1 }}>
                   <View style={s.hTop}>
@@ -371,7 +407,7 @@ const s = StyleSheet.create({
   progressText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: C.navy },
   track: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginBottom: 20 },
   fill: { height: '100%', borderRadius: 3 },
-  btnRow: { flexDirection: 'row', gap: 12 },
+  btnRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   renew: { flex: 1, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, borderWidth: 1.5, borderColor: C.neutral },
   renewText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.neutral },
   qrBtn: { width: 50, height: 50, borderRadius: 16, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
@@ -385,8 +421,8 @@ const s = StyleSheet.create({
   fineSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: C.muted },
   fineAmt: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 20, color: C.primary, letterSpacing: -0.5 },
   finePending: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, color: C.primary, letterSpacing: 0.5, marginTop: 2 },
-  clear: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 16 },
-  clearText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15, color: '#fff' },
+  deskNotice: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#FEE2E2', borderRadius: 16, borderWidth: 1, borderColor: '#FCA5A5' },
+  deskNoticeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: C.primary, flex: 1, lineHeight: 16 },
   hRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 18 },
   hIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: C.pale, alignItems: 'center', justifyContent: 'center' },
   hTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
