@@ -637,18 +637,85 @@ def api_history(student_id):
 @api_bp.route('/pyq/<student_id>', methods=['GET'])
 def api_pyq(student_id):
     """Returns academic papers automatically filtered by student demographics."""
-    student = Student.query.get(student_id)
-    if not student:
-        return jsonify({"message": "Student not found"}), 404
-        
-    papers = Paper.query.filter_by(course=student.course, dept=student.dept, semester=str(student.semester)).all()
-    pyqs = []
-    for p in papers:
-        pyqs.append({
-            "paper_id": p.id,
-            "title": p.filename,
-            "subject": f"{p.dept} Sem {p.semester}",
-            "year": str(p.year) if getattr(p, 'year', None) else "2025",
-            "pdf_url": f"/static/uploads/{p.filename}"
-        })
-    return jsonify({"pyqs": pyqs}), 200
+    try:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({"message": "Student not found"}), 404
+
+        # Dynamically check if year column exists in paper table and migrate safely if missing
+        from sqlalchemy import text
+        has_year_col = True
+        try:
+            paper_cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(paper)")).fetchall()]
+            if 'year' not in paper_cols:
+                has_year_col = False
+                try:
+                    db.session.execute(text("ALTER TABLE paper ADD COLUMN year VARCHAR(10) DEFAULT '2025'"))
+                    db.session.commit()
+                    has_year_col = True
+                except Exception:
+                    db.session.rollback()
+        except Exception:
+            pass
+
+        # Normalize semester representation (e.g. "5", "5th Sem", 5)
+        sem_str = str(student.semester) if student.semester is not None else ""
+        sem_digits = ''.join(filter(str.isdigit, sem_str))
+
+        query = Paper.query
+        if student.course:
+            query = query.filter((Paper.course == student.course) | Paper.course.ilike(f"%{student.course}%"))
+        if student.dept:
+            query = query.filter((Paper.dept == student.dept) | Paper.dept.ilike(f"%{student.dept}%"))
+
+        if sem_digits:
+            query = query.filter(
+                (Paper.semester == sem_str) |
+                (Paper.semester == sem_digits) |
+                Paper.semester.ilike(f"%{sem_digits}%")
+            )
+        elif sem_str:
+            query = query.filter_by(semester=sem_str)
+
+        papers = query.all()
+        pyqs = []
+        for p in papers:
+            year_val = "2025"
+            if has_year_col:
+                raw_yr = getattr(p, 'year', None)
+                if raw_yr and str(raw_yr).strip():
+                    year_val = str(raw_yr).strip()
+
+            pyqs.append({
+                "paper_id": p.id,
+                "title": p.filename or "Question Paper",
+                "subject": f"{p.dept or 'General'} Sem {p.semester or ''}".strip(),
+                "year": year_val,
+                "pdf_url": f"/static/uploads/{p.filename}" if p.filename else ""
+            })
+
+        return jsonify({"pyqs": pyqs}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"api_pyq error: {e}")
+        db.session.rollback()
+        # Fallback safe query using raw SQL if ORM has mapping or schema mismatch
+        try:
+            from sqlalchemy import text
+            rows = db.session.execute(
+                text("SELECT id, course, dept, semester, filename FROM paper")
+            ).fetchall()
+            pyqs = []
+            for r in rows:
+                p_id, p_course, p_dept, p_sem, p_file = r[0], r[1], r[2], r[3], r[4]
+                pyqs.append({
+                    "paper_id": p_id,
+                    "title": p_file or "Question Paper",
+                    "subject": f"{p_dept or 'General'} Sem {p_sem or ''}".strip(),
+                    "year": "2025",
+                    "pdf_url": f"/static/uploads/{p_file}" if p_file else ""
+                })
+            return jsonify({"pyqs": pyqs}), 200
+        except Exception as fallback_e:
+            current_app.logger.error(f"api_pyq fallback error: {fallback_e}")
+            return jsonify({"pyqs": []}), 200

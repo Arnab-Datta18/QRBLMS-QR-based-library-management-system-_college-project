@@ -32,6 +32,50 @@ def create_app():
     app.register_blueprint(web_bp)
     app.register_blueprint(api_bp)
 
+    # Run safe, idempotent database migrations on startup (WSGI and CLI compatible)
+    with app.app_context():
+        try:
+            from sqlalchemy import text
+            db.create_all()
+
+            # Ensure student table columns exist
+            student_cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(student)")).fetchall()]
+            if 'phone' not in student_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE student ADD COLUMN phone VARCHAR(20)"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            if 'profile_pic_url' not in student_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE student ADD COLUMN profile_pic_url VARCHAR(200)"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            # Ensure paper table year column exists
+            paper_cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(paper)")).fetchall()]
+            if 'year' not in paper_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE paper ADD COLUMN year VARCHAR(10) DEFAULT '2025'"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            # Ensure default admin account exists
+            try:
+                if not Librarian.query.filter_by(id='admin').first():
+                    hashed_pw = generate_password_hash('1234')
+                    default_admin = Librarian(id='admin', password=hashed_pw)
+                    db.session.add(default_admin)
+                    db.session.commit()
+            except Exception:
+                db.session.rollback()
+        except Exception as e:
+            app.logger.warning(f"Database migration notice: {e}")
+        finally:
+            db.session.remove()
+
     def is_api_request():
         return request.path.startswith('/api/')
 
@@ -78,41 +122,5 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    with app.app_context():
-        try:
-            db.create_all()
-            
-            # --- START MIGRATION FOR STUDENT TABLE ---
-            from sqlalchemy import text
-            try:
-                db.session.execute(text('ALTER TABLE student ADD COLUMN phone VARCHAR(20)'))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                
-            try:
-                db.session.execute(text('ALTER TABLE student ADD COLUMN profile_pic_url VARCHAR(200)'))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            # --- END MIGRATION FOR STUDENT TABLE ---
-
-            # --- START MIGRATION FOR PAPER TABLE ---
-            try:
-                db.session.execute(text("ALTER TABLE paper ADD COLUMN year VARCHAR(10) DEFAULT '2025'"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            # --- END MIGRATION FOR PAPER TABLE ---
-
-            if not Librarian.query.filter_by(id='admin').first():
-                # Hash default admin password
-                hashed_pw = generate_password_hash('1234')
-                default_admin = Librarian(id='admin', password=hashed_pw)
-                db.session.add(default_admin)
-                db.session.commit()
-        finally:
-            db.session.remove()
-
     flask_debug = os.getenv("FLASK_DEBUG", "True").lower() in ['true', '1', 't', 'yes', 'y']
     app.run(host='0.0.0.0', port=5000, debug=flask_debug)

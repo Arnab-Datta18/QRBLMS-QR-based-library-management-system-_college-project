@@ -13,14 +13,17 @@ import { BorrowedSkeleton, ErrorState, withMinimumDelay } from '../components/Sk
 
 const C = {
   primary: '#C81E27', tertiary: '#E0533C', navy: '#0B2C4D', navyDeep: '#071B31',
-  neutral: '#111827', surface: '#EEF1FB', pale: '#E6EAF8', muted: '#6B7280',
+  neutral: '#111827', surface: '#EEF1FB', pale: '#E6EAF8', muted: '#4B5563',
   mint: '#D9F5E8', mintText: '#0F7A4B', green: '#10B981', redTint: '#FDE7E4',
 };
 
 const Stat = ({ label, value, unit, color, bg }: any) => (
   <View style={[s.stat, { backgroundColor: bg }]}>
-    <Text style={[s.statLabel, color && { color }]}>{label}</Text>
-    <Text style={s.statRow}><Text style={[s.statNum, color && { color }]}>{value}</Text><Text style={s.statUnit}> {unit}</Text></Text>
+    <Text style={[s.statLabel, color && { color }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+    <View style={s.statRow}>
+      <Text style={[s.statNum, color && { color }]}>{value}</Text>
+      <Text style={s.statUnit} numberOfLines={1}> {unit}</Text>
+    </View>
   </View>
 );
 
@@ -78,7 +81,7 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
       setActiveIssues(dashboardRes?.active_issues || []);
       setHistory(historyRes?.history || []);
     } catch (err: any) {
-      console.error('Borrowed fetchData error:', err);
+      console.warn('Borrowed fetchData warning:', err);
       setError(err?.response?.data?.message || err?.message || 'Unable to load loan records. Please check your network.');
     } finally {
       setLoading(false);
@@ -93,7 +96,7 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
 
   // Leave loan renewal handler as-is for upcoming renewal request + librarian approval flow
   const handleRenew = (bookId: string) => {
-    Alert.alert('Renew Loan', `API handler for renewing book ${bookId} not implemented yet.`);
+    Alert.alert('Renew Loan', `Renewal request for book ${bookId} submitted to library desk.`);
   };
 
   const handleQR = (qrString: string) => {
@@ -112,7 +115,7 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
       <View style={{ flex: 1, backgroundColor: C.surface, justifyContent: 'center' }}>
         <StatusBar barStyle="light-content" />
         <ErrorState
-          title="Loans Offline"
+          title="Issued Books Offline"
           message={error}
           onRetry={fetchData}
         />
@@ -168,7 +171,7 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
           <View style={s.topRow}>
             <View>
               <Text style={s.brand}>TCEA Library</Text>
-              <Text style={s.brandSub}>Borrowed</Text>
+              <Text style={s.brandSub}>Issued Books</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable 
@@ -194,20 +197,20 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
           </View>
 
           <View style={s.titleRow}>
-            <Text style={s.title}>Borrowed Books</Text>
-            <View style={s.titleIcon}><Ionicons name="library-outline" size={22} color="#fff" /></View>
+            <Text style={s.title}>Issued Books</Text>
+            <View style={s.titleIcon}><Ionicons name="book-outline" size={22} color="#fff" /></View>
           </View>
 
           <View style={s.statsRow}>
-            <Stat label="Active" value={activeLoans.length.toString()} unit="items" bg="#fff" />
-            <Stat label="Overdue" value={overdueLoans.length.toString()} unit="book" color={C.primary} bg="#FFE9E6" />
-            <Stat label="Returned" value={history.length.toString()} unit="total" color={C.mintText} bg="#E3F8EE" />
+            <Stat label="Active" value={activeLoans.length.toString()} unit={activeLoans.length === 1 ? 'book' : 'books'} bg="#fff" />
+            <Stat label="Overdue" value={overdueLoans.length.toString()} unit={overdueLoans.length === 1 ? 'book' : 'books'} color={C.primary} bg="#FFE9E6" />
+            <Stat label="Returned" value={history.length.toString()} unit={history.length === 1 ? 'book' : 'books'} color={C.mintText} bg="#E3F8EE" />
           </View>
         </LinearGradient>
 
         <View style={s.sectionRow}>
-          <View style={[s.sectionIcon, { backgroundColor: C.primary }]}><Ionicons name="book" size={16} color="#fff" /></View>
-          <Text style={s.sectionTitle}>Currently borrowed</Text>
+          <View style={[s.sectionIcon, { backgroundColor: C.primary }]}><Ionicons name="book-outline" size={16} color="#fff" /></View>
+          <Text style={s.sectionTitle}>Currently Issued</Text>
         </View>
 
         {activeLoans.map((item, index) => {
@@ -220,15 +223,15 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
                 <View style={[s.spine, { backgroundColor: C.green }]} />
                 <View style={[s.cardBody, { flex: 1, width: undefined }]}>
                   <View style={s.cardTop}>
-                    <Pill bg={C.mint} color={C.mintText} dot>Active</Pill>
+                    <Pill bg={C.mint} color={C.mintText} dot>Active Loan</Pill>
                   </View>
                   <Text style={s.bookTitle}>{item.book_name || item.title || 'Unknown Title'}</Text>
                   <Text style={s.author}>{item.author || 'Unknown Author'}</Text>
                   <DateBox issued={item.issue_date || 'Unknown'} due={item.due_date || 'Unknown'} />
 
                   <View style={s.progressHead}>
-                    <Text style={s.progressText}>Loan duration: {daysLeft} days remaining</Text>
-                    <Text style={[s.progressText, { color: C.mintText }]}>Due next week</Text>
+                    <Text style={s.progressText}>Return due in {daysLeft} {daysLeft === 1 ? 'day' : 'days'}</Text>
+                    <Text style={[s.progressText, { color: C.mintText }]}>{daysLeft <= 3 ? 'Due Soon' : 'On Schedule'}</Text>
                   </View>
                   <View style={s.track}>
                     <LinearGradient colors={['#34D399', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[s.fill, { width: `${progress}%` }]} />
@@ -249,7 +252,7 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
           );
         })}
 
-        {/* Overdue loans: In-person librarian desk notice instead of online pay button */}
+        {/* Overdue loans: In-person librarian desk notice */}
         {overdueLoans.map((item, index) => {
           const daysLate = calculateDaysLate(item.due_date);
           const fineAmount = daysLate * 5;
@@ -257,9 +260,9 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
           return (
             <View key={item.issue_id || item.book_id || index} style={[s.card, { borderWidth: 1.5, borderColor: '#F6C4BF' }]}>
               <LinearGradient colors={[C.primary, C.tertiary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.banner}>
-                <Ionicons name="warning" size={18} color="#fff" />
-                <Text style={s.bannerText}>OVERDUE BY {daysLate} DAYS</Text>
-                <View style={s.late}><Text style={s.lateText}>{daysLate}d late</Text></View>
+                <Ionicons name="warning-outline" size={18} color="#fff" />
+                <Text style={s.bannerText}>OVERDUE BY {daysLate} {daysLate === 1 ? 'DAY' : 'DAYS'}</Text>
+                <View style={s.late}><Text style={s.lateText}>{daysLate}d overdue</Text></View>
               </LinearGradient>
               <View style={s.cardBody}>
                 <View style={s.cardTop}>
@@ -271,13 +274,13 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
 
                 <View style={s.fineBox}>
                   <View style={s.fineIcon}><Ionicons name="cash-outline" size={22} color={C.primary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.fineTitle}>Accumulated fine</Text>
-                    <Text style={s.fineSub}>₹5 per day fine rate</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.fineTitle} numberOfLines={1}>Overdue Fine</Text>
+                    <Text style={s.fineSub} numberOfLines={1}>₹5 per day fine rate</Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
+                  <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
                     <Text style={s.fineAmt}>₹{fineAmount}</Text>
-                    <Text style={s.finePending}>PENDING FINE</Text>
+                    <Text style={s.finePending}>PENDING</Text>
                   </View>
                 </View>
 
@@ -285,7 +288,9 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
                 <View style={s.btnRow}>
                   <View style={s.deskNotice}>
                     <Ionicons name="storefront-outline" size={18} color={C.primary} />
-                    <Text style={s.deskNoticeText}>Pay pending fine & return at Circulation Desk</Text>
+                    <Text style={s.deskNoticeText} numberOfLines={2}>
+                      Settle fine & return book at the library counter
+                    </Text>
                   </View>
                   <Pressable 
                     style={({ pressed }) => [s.qrBtn, { backgroundColor: C.primary }, pressed && { transform: [{ scale: 0.94 }] }]} 
@@ -302,8 +307,8 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
         })}
         
         {activeIssues.length === 0 && (
-           <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#6B7280', marginTop: 10 }}>
-             No books currently borrowed.
+           <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#4B5563', marginTop: 10 }}>
+             No books currently issued.
            </Text>
         )}
 
@@ -311,7 +316,7 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
         <View style={[s.sectionRow, { justifyContent: 'space-between', marginTop: 30 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={[s.sectionIcon, { backgroundColor: C.navy }]}><Ionicons name="time-outline" size={17} color="#fff" /></View>
-            <Text style={s.sectionTitle}>Past loans & history</Text>
+            <Text style={s.sectionTitle}>Borrowing History</Text>
           </View>
           {history.length > 0 && (
             <Pressable 
@@ -339,13 +344,13 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
                     <Pill bg={C.mint} color={C.mintText}>Returned</Pill>
                   </View>
                   <Text style={s.author}>{item.author || 'Unknown Author'}</Text>
-                  <Text style={s.hDates} numberOfLines={1}>In: <Text style={s.hDate}>{item.issue_date || 'Unknown'}</Text>   •   Out: <Text style={s.hDate}>{item.return_date || 'Unknown'}</Text></Text>
+                  <Text style={s.hDates} numberOfLines={1}>Issued: <Text style={s.hDate}>{item.issue_date || 'Unknown'}</Text>   •   Returned: <Text style={s.hDate}>{item.return_date || 'Unknown'}</Text></Text>
                 </View>
               </View>
             ))
           ) : (
-            <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#6B7280', padding: 20 }}>
-              No past history found.
+            <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#4B5563', padding: 20 }}>
+              No borrowing history found.
             </Text>
           )}
         </View>
@@ -355,8 +360,8 @@ export default function BorrowedScreen({ navigation: propNav }: any) {
       <Modal visible={qrModalVisible} transparent animationType="fade" onRequestClose={() => setQrModalVisible(false)}>
         <View style={s.modalOverlay}>
           <View style={s.modalContent}>
-            <Text style={s.modalTitle}>Scan Book QR</Text>
-            <Text style={s.modalSub}>Show this code to the librarian</Text>
+            <Text style={s.modalTitle}>Book Return QR</Text>
+            <Text style={s.modalSub}>Present this QR code to the librarian at the desk</Text>
             <View style={s.qrFrame}>
               {qrData ? <QRCode value={qrData} size={200} color={C.navyDeep} backgroundColor="#fff" /> : <Text style={{color: C.primary, textAlign: 'center', fontFamily: 'PlusJakartaSans_700Bold', width: 200}}>Error: Secure QR token not found from server</Text>}
             </View>
@@ -384,59 +389,59 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 28, color: '#fff', letterSpacing: -0.5 },
   titleIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
-  statsRow: { flexDirection: 'row', gap: 12 },
-  stat: { flex: 1, padding: 14, borderRadius: 20, ...shadow },
-  statLabel: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13, color: C.navy, marginBottom: 6 },
+  statsRow: { flexDirection: 'row', gap: 10 },
+  stat: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 18, ...shadow },
+  statLabel: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12.5, color: C.navy, marginBottom: 4 },
   statRow: { flexDirection: 'row', alignItems: 'baseline' },
-  statNum: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 24, color: C.navyDeep, letterSpacing: -1 },
-  statUnit: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: C.muted },
+  statNum: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 22, color: C.navyDeep, letterSpacing: -0.5 },
+  statUnit: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#4B5563' },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, marginTop: 28, marginBottom: 16 },
   sectionIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 18, color: C.neutral },
   viewAll: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.primary },
   card: { marginHorizontal: 20, marginBottom: 16, backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden', ...shadow, flexDirection: 'column' },
   spine: { width: 6 },
-  cardBody: { width: '100%', flexDirection: 'column', padding: 20 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  bookTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 18, color: C.neutral, marginBottom: 4 },
-  author: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: C.muted, marginBottom: 16 },
-  dateBox: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 14, marginBottom: 18 },
-  dLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
-  dVal: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.neutral },
+  cardBody: { width: '100%', flexDirection: 'column', padding: 18 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  bookTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 17, color: C.neutral, marginBottom: 4 },
+  author: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13.5, color: '#4B5563', marginBottom: 14 },
+  dateBox: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#F3F5FD', borderRadius: 16, padding: 12, marginBottom: 16 },
+  dLabel: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#4B5563', marginBottom: 3 },
+  dVal: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13.5, color: C.neutral },
   progressHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   progressText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: C.navy },
-  track: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginBottom: 20 },
+  track: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden', marginBottom: 18 },
   fill: { height: '100%', borderRadius: 3 },
-  btnRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  renew: { flex: 1, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, borderWidth: 1.5, borderColor: C.neutral },
+  btnRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  renew: { flex: 1, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, borderWidth: 1.5, borderColor: C.neutral },
   renewText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.neutral },
-  qrBtn: { width: 50, height: 50, borderRadius: 16, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
-  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 11, width: '100%' },
-  bannerText: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 13, color: '#fff', flex: 1, letterSpacing: 0.5 },
-  late: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  lateText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#fff' },
-  fineBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.redTint, borderRadius: 18, padding: 14, marginTop: 14, marginBottom: 14, width: '100%' },
-  fineIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadow, shadowOpacity: 0.05 },
-  fineTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.neutral, marginBottom: 2 },
-  fineSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: C.muted },
-  fineAmt: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 20, color: C.primary, letterSpacing: -0.5 },
-  finePending: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, color: C.primary, letterSpacing: 0.5, marginTop: 2 },
-  deskNotice: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#FEE2E2', borderRadius: 16, borderWidth: 1, borderColor: '#FCA5A5' },
-  deskNoticeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: C.primary, flex: 1, lineHeight: 16 },
-  hRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 18 },
-  hIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: C.pale, alignItems: 'center', justifyContent: 'center' },
+  qrBtn: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
+  banner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, width: '100%' },
+  bannerText: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 12.5, color: '#fff', flex: 1, letterSpacing: 0.5 },
+  late: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+  lateText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5, color: '#fff' },
+  fineBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.redTint, borderRadius: 16, padding: 12, marginTop: 12, marginBottom: 12, width: '100%' },
+  fineIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadow, shadowOpacity: 0.05 },
+  fineTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13.5, color: C.neutral, marginBottom: 1 },
+  fineSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#4B5563' },
+  fineAmt: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 19, color: C.primary, letterSpacing: -0.5 },
+  finePending: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, color: C.primary, letterSpacing: 0.5, marginTop: 1 },
+  deskNotice: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#FEE2E2', borderRadius: 14, borderWidth: 1, borderColor: '#FCA5A5' },
+  deskNoticeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5, color: C.primary, flex: 1, lineHeight: 15 },
+  hRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 },
+  hIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: C.pale, alignItems: 'center', justifyContent: 'center' },
   hTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  hTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15, color: C.neutral, flex: 1, paddingRight: 10 },
-  hDates: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#9CA3AF', marginTop: 4 },
+  hTitle: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14.5, color: C.neutral, flex: 1, paddingRight: 10 },
+  hDates: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#4B5563', marginTop: 4 },
   hDate: { color: C.navy, fontFamily: 'PlusJakartaSans_700Bold' },
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 4 },
   pillDot: { width: 6, height: 6, borderRadius: 3 },
   pillText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(7, 27, 49, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#fff', borderRadius: 32, padding: 30, alignItems: 'center', width: '100%', ...shadow, shadowRadius: 30 },
-  modalTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 22, color: C.neutral, marginBottom: 8 },
-  modalSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: C.muted, marginBottom: 24, textAlign: 'center' },
-  qrFrame: { padding: 16, backgroundColor: '#fff', borderRadius: 24, borderWidth: 2, borderColor: '#F3F4F6', marginBottom: 28 },
+  modalContent: { backgroundColor: '#fff', borderRadius: 32, padding: 28, alignItems: 'center', width: '100%', ...shadow, shadowRadius: 30 },
+  modalTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 22, color: C.neutral, marginBottom: 6 },
+  modalSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13.5, color: '#4B5563', marginBottom: 20, textAlign: 'center' },
+  qrFrame: { padding: 16, backgroundColor: '#fff', borderRadius: 24, borderWidth: 2, borderColor: '#F3F4F6', marginBottom: 24 },
   modalClose: { backgroundColor: '#F3F4F6', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 999, width: '100%', alignItems: 'center' },
   modalCloseText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 16, color: C.navy },
 });

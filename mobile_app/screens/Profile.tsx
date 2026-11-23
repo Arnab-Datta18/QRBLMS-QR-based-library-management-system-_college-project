@@ -48,9 +48,9 @@ const C = {
   checkGreen: '#10B981',
   onlineGreen: '#34D399',
   softRed: '#FDE7E4',
-  muted: '#6B7280',
-  labelGrey: '#4B5C75',
-  placeholder: '#8A94A8',
+  muted: '#4B5563',
+  labelGrey: '#374151',
+  placeholder: '#5A6578',
   peach: '#FFB3A8',
 };
 
@@ -417,7 +417,7 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
             {/* Registered Badge Pill */}
             <View style={s.badgePill}>
               <Ionicons name="school-outline" size={14} color="#FFFFFF" />
-              <Text style={s.badgeText}>TCEA REGISTERED STUDENT</Text>
+              <Text style={s.badgeText}>TCEA ENROLLED STUDENT</Text>
             </View>
 
             {/* Two Stat Cards */}
@@ -465,13 +465,13 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
                 <Ionicons name="id-card-outline" size={22} color="#FFFFFF" />
               </LinearGradient>
               <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>Registration Record</Text>
+                <Text style={s.cardTitle}>Academic & Library Record</Text>
               </View>
               <Pressable
                 onPress={() =>
                   Alert.alert(
                     'Academic Record Locked',
-                    'Official academic details are managed and verified by the Institute Registrar.'
+                    'Academic details are verified from your TCEA student registration record.'
                   )
                 }
                 style={({ pressed }) => [
@@ -552,7 +552,7 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.registrarTitle}>Authenticated by Registrar</Text>
-                <Text style={s.registrarSub}>Session 2023–2026 • Validated</Text>
+                <Text style={s.registrarSub}>Techno College of Engineering Agartala</Text>
               </View>
               <View style={s.checkCircle}>
                 <Ionicons name="checkmark" size={15} color="#FFFFFF" />
@@ -567,9 +567,9 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
                 <Ionicons name="lock-closed" size={22} color={C.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>Account Security</Text>
+                <Text style={s.cardTitle}>Change Portal Password</Text>
                 <Text style={s.cardSub}>
-                  Manage your student portal login credentials
+                  Update your student library portal password
                 </Text>
               </View>
             </View>
@@ -713,9 +713,9 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
                 <Ionicons name="log-out-outline" size={22} color={C.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>Account Session</Text>
+                <Text style={s.cardTitle}>Sign Out</Text>
                 <Text style={s.cardSub}>
-                  Safely sign out of your student portal on this device
+                  Log out of your library account on this device
                 </Text>
               </View>
             </View>

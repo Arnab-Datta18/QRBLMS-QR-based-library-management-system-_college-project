@@ -87,13 +87,13 @@ export default function NotificationCategoryCard({
     ? '#FFFFFF'
     : isTheme5
     ? '#7A4A0A'
-    : '#4B5C75';
+    : '#374151';
 
   const headerTimeColor = isTheme1 || isTheme4
     ? 'rgba(255,255,255,0.85)'
     : isTheme5
     ? '#7A4A0A'
-    : '#6B7280';
+    : '#4B5563';
 
   const renderCardContent = () => {
     // ----------------------------------------------------
@@ -482,7 +482,7 @@ const s = StyleSheet.create({
   dashedStripLabel: {
     fontSize: 12,
     fontFamily: 'PlusJakartaSans_500Medium',
-    color: '#6B7280',
+    color: '#4B5563',
   },
   dashedStripChip: {
     backgroundColor: '#D9F5E8',

@@ -32,15 +32,15 @@ const withTimeout = (promise: Promise<any>, ms = 3000) => {
 
 const C = {
   primary: '#C81E27', tertiary: '#E0533C', navy: '#0B2C4D', navyDeep: '#071B31',
-  neutral: '#111827', surface: '#EEF1FB', field: '#F3F5FD', border: '#DDE3F3', muted: '#6B7280',
+  neutral: '#111827', surface: '#EEF1FB', field: '#F3F5FD', border: '#DDE3F3', muted: '#4B5563',
 };
 
 const Field = ({ label, icon, right, focused, ...props }: any) => (
   <View style={{ marginBottom: 16 }}>
     <Text style={s.label}>{label}</Text>
     <View style={[s.field, focused && s.fieldFocused]}>
-      <Ionicons name={icon} size={20} color={focused ? C.primary : '#8A94A8'} />
-      <TextInput style={s.input} placeholderTextColor="#9AA3B5" {...props} />
+      <Ionicons name={icon} size={20} color={focused ? C.primary : '#5A6578'} />
+      <TextInput style={s.input} placeholderTextColor="#6B7280" {...props} />
       {right}
     </View>
   </View>
@@ -301,5 +301,5 @@ const s = StyleSheet.create({
   bioText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.navy },
   footer: { alignItems: 'center', marginTop: 'auto', paddingTop: 28, gap: 4 },
   foot1: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12.5, color: '#4B5563' },
-  foot2: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11, color: '#8A94A8', letterSpacing: 0.4 },
+  foot2: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11, color: '#4B5563', letterSpacing: 0.4 },
 });

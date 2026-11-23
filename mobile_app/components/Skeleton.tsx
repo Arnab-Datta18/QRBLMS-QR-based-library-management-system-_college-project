@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   errorMessage: {
     fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 13.5,
-    color: '#6B7280',
+    color: '#4B5563',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,

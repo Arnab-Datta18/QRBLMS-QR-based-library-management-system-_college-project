@@ -282,13 +282,13 @@ export default function Home({ navigation: propNav }: any) {
               onPress={() => setGatepassModalVisible(true)}
               style={({ pressed }) => [{ width: '100%', alignItems: 'center' }, pressed && { opacity: 0.92 }]}
               accessibilityRole="button"
-              accessibilityLabel="Tap to expand Digital Library Pass"
+              accessibilityLabel="Tap to expand Library Gatepass"
             >
               <View style={s.passHead}>
-                <View style={s.passIcon}><Ionicons name="id-card-outline" size={20} color="#fff" /></View>
+                <View style={s.passIcon}><Ionicons name="qr-code-outline" size={20} color="#fff" /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.passTitle}>TCEA Digital Library Pass</Text>
-                  <Text style={s.passSub}>Verified institutional gatepass</Text>
+                  <Text style={s.passTitle}>TCEA Library Gatepass</Text>
+                  <Text style={s.passSub}>Campus library entry & circulation pass</Text>
                 </View>
                 <View style={s.active}><Text style={s.activeText}>Active</Text></View>
               </View>
@@ -315,7 +315,7 @@ export default function Home({ navigation: propNav }: any) {
               onPress={() => setGatepassModalVisible(true)}
               style={({ pressed }) => [pressed && { opacity: 0.7 }]}
             >
-              <Text style={s.hint}>Tap to expand or scan at library terminal</Text>
+              <Text style={s.hint}>Tap to expand for entrance or desk scan</Text>
             </Pressable>
           </LinearGradient>
         </LinearGradient>
@@ -324,30 +324,30 @@ export default function Home({ navigation: propNav }: any) {
         <View style={s.statsRow}>
           <View style={[s.stat, { backgroundColor: '#FEE2E2' }]}>
             <View style={[s.statIcon, { backgroundColor: '#FECACA' }]}>
-              <Ionicons name="book" size={20} color={C.primary} />
+              <Ionicons name="book-outline" size={21} color={C.primary} />
             </View>
             <View>
               <Text style={s.statBig}>{(data.active_issues || []).length} / 4</Text>
-              <Text style={s.statSmall}>Active loans</Text>
+              <Text style={s.statSmall}>Issued Books</Text>
             </View>
           </View>
           
           <View style={[s.stat, { backgroundColor: '#E0E7FF' }]}>
             <View style={[s.statIcon, { backgroundColor: '#C7D2FE' }]}>
-              <Ionicons name="hourglass" size={20} color={C.navy} />
+              <Ionicons name="time-outline" size={21} color={C.navy} />
             </View>
             <View>
               <Text style={[s.statBig, nextDueDateText === 'Overdue' && { color: C.primary }]}>
                 {nextDueDateText}
               </Text>
-              <Text style={s.statSmall}>Next due date</Text>
+              <Text style={s.statSmall}>Return Due</Text>
             </View>
           </View>
         </View>
 
         {/* Dynamic Books Section */}
         <View style={s.sectionRow}>
-          <Text style={s.sectionTitle}>Available books for you</Text>
+          <Text style={s.sectionTitle}>Available Books</Text>
           <View style={s.count}><Text style={s.countText}>{catalog.length}</Text></View>
           <View style={{ flex: 1 }} />
           <Pressable onPress={() => navigation.navigate('Borrowed')} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
@@ -356,8 +356,8 @@ export default function Home({ navigation: propNav }: any) {
         </View>
 
         {catalog.length === 0 ? (
-          <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#6B7280', marginTop: 20 }}>
-            No books available for your course currently.
+          <Text style={{ textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium', color: '#4B5563', marginTop: 20 }}>
+            No books available for your semester currently.
           </Text>
         ) : (
           catalog.slice(0, 5).map((book, index) => {
@@ -369,33 +369,15 @@ export default function Home({ navigation: propNav }: any) {
               <View key={book.book_id} style={[s.book, !isAvailable && { opacity: 0.6 }]}>
                 <View style={[s.spine, { backgroundColor: spineColor }]} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={s.bookTop}>
-                    <View style={s.tag}>
-                      <Text style={s.tagText} numberOfLines={1} ellipsizeMode="tail">
-                        {data.department} • {formatSemester(data.semester)}
-                      </Text>
-                    </View>
-                    <View style={[s.avail, !isAvailable && { backgroundColor: '#F3F4F6' }]}>
-                      <Text style={[s.availText, !isAvailable && { color: '#6B7280' }]}>
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                      </Text>
-                    </View>
-                  </View>
-                  
                   <Text style={s.bookTitle} numberOfLines={2}>{book.title}</Text>
                   <Text style={s.author} numberOfLines={1} ellipsizeMode="tail">{book.author}</Text>
                   
-                  {/* Informational book footer */}
+                  {/* Clean book footer */}
                   <View style={s.bookBottom}>
-                    <Text style={s.ref} numberOfLines={1}>Ref: {book.book_id}</Text>
-                    <View style={[s.infoBadge, isAvailable ? { backgroundColor: '#E8F5E9' } : { backgroundColor: '#F3F4F6' }]}>
-                      <Ionicons 
-                        name={isAvailable ? "checkmark-circle" : "close-circle"} 
-                        size={13} 
-                        color={isAvailable ? C.mintText : '#6B7280'} 
-                      />
-                      <Text style={[s.infoBadgeText, isAvailable ? { color: C.mintText } : { color: '#6B7280' }]}>
-                        {isAvailable ? 'In Stack' : 'Checked Out'}
+                    <Text style={s.ref} numberOfLines={1}>Book ID: {book.book_id}</Text>
+                    <View style={[s.avail, !isAvailable && { backgroundColor: '#F3F4F6' }]}>
+                      <Text style={[s.availText, !isAvailable && { color: '#4B5563' }]}>
+                        {isAvailable ? 'Available' : 'Checked Out'}
                       </Text>
                     </View>
                   </View>
@@ -419,11 +401,11 @@ export default function Home({ navigation: propNav }: any) {
           <View style={s.gatepassCard}>
             <View style={s.gatepassTop}>
               <View style={s.passIcon}>
-                <Ionicons name="id-card-outline" size={20} color="#fff" />
+                <Ionicons name="qr-code-outline" size={20} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.gatepassTitle}>TCEA Digital Library Pass</Text>
-                <Text style={s.gatepassSub}>Verified Institutional Gatepass</Text>
+                <Text style={s.gatepassTitle}>TCEA Library Gatepass</Text>
+                <Text style={s.gatepassSub}>Techno College of Engineering Agartala</Text>
               </View>
               <Pressable 
                 onPress={() => setGatepassModalVisible(false)} 
@@ -467,7 +449,7 @@ export default function Home({ navigation: propNav }: any) {
             </View>
 
             <Text style={s.gatepassFooterHint}>
-              Present this high-brightness QR code directly under the library entrance turnstile or scanner terminal.
+              Present this high-brightness QR pass directly at the library entrance gate or circulation desk.
             </Text>
 
             <Pressable 
@@ -499,14 +481,14 @@ const s = StyleSheet.create({
   passHead: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' },
   passIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
   passTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 14, color: C.neutral },
-  passSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#6B7280' },
+  passSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#4B5563' },
   active: { backgroundColor: C.mint, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
   activeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: C.mintText },
   qrFrame: { marginTop: 16, padding: 5, borderRadius: 26 },
   qrInner: { backgroundColor: '#fff', padding: 16, borderRadius: 22 },
   idPill: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, backgroundColor: '#E6EAF8', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 },
   idText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15, letterSpacing: 1.5, color: C.navy },
-  hint: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12.5, color: '#6B7280', marginTop: 8 },
+  hint: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12.5, color: '#475569', marginTop: 8 },
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 20 },
   stat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 22 },
   statIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
@@ -519,22 +501,17 @@ const s = StyleSheet.create({
   viewAll: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.primary },
   book: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 14, backgroundColor: C.card, borderRadius: 22, overflow: 'hidden', ...shadow, shadowOpacity: 0.08 },
   spine: { width: 7 },
-  bookTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, paddingHorizontal: 14, gap: 8 },
-  tag: { flexShrink: 1, backgroundColor: '#E6EAF8', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-  tagText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, color: C.navy },
-  avail: { flexShrink: 0, backgroundColor: C.mint, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 },
+  avail: { flexShrink: 0, backgroundColor: C.mint, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   availText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, color: C.mintText },
-  bookTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 16.5, lineHeight: 22, color: C.neutral, marginTop: 8, paddingHorizontal: 14 },
-  author: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, color: '#6B7280', paddingHorizontal: 14, marginTop: 2 },
+  bookTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 16.5, lineHeight: 22, color: C.neutral, marginTop: 14, paddingHorizontal: 14 },
+  author: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, color: '#4B5563', paddingHorizontal: 14, marginTop: 2 },
   bookBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, paddingTop: 10, gap: 8 },
-  ref: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#6B7280', flexShrink: 1 },
-  infoBadge: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
-  infoBadgeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5 },
+  ref: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#374151', flexShrink: 1 },
   gatepassOverlay: { flex: 1, backgroundColor: 'rgba(7, 27, 49, 0.78)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   gatepassCard: { backgroundColor: '#FFFFFF', borderRadius: 32, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center', ...shadow, shadowRadius: 30 },
   gatepassTop: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginBottom: 16 },
   gatepassTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 15, color: C.neutral },
-  gatepassSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#6B7280' },
+  gatepassSub: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 11.5, color: '#4B5563' },
   gatepassCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   gatepassStudentInfo: { alignItems: 'center', width: '100%', marginBottom: 16 },
   gatepassName: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 20, color: C.neutral, textAlign: 'center' },
@@ -546,7 +523,7 @@ const s = StyleSheet.create({
   gatepassQrInner: { padding: 8, backgroundColor: '#FFFFFF', borderRadius: 16 },
   highBrightnessPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFBEB', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, marginTop: 10 },
   highBrightnessText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5, color: '#D97706' },
-  gatepassFooterHint: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 16, lineHeight: 18, paddingHorizontal: 10 },
+  gatepassFooterHint: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#4B5563', textAlign: 'center', marginTop: 16, lineHeight: 18, paddingHorizontal: 10 },
   gatepassDoneBtn: { backgroundColor: C.navy, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', marginTop: 18 },
   gatepassDoneText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15, color: '#FFFFFF' },
 

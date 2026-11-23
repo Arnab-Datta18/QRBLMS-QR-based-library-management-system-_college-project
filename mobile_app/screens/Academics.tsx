@@ -15,7 +15,7 @@ import { AcademicsSkeleton, ErrorState, withMinimumDelay } from '../components/S
 
 const C = {
   primary: '#C81E27', tertiary: '#E0533C', navy: '#0B2C4D', navyDeep: '#071B31',
-  neutral: '#111827', surface: '#EEF1FB', pale: '#E6EAF8', muted: '#6B7280',
+  neutral: '#111827', surface: '#EEF1FB', pale: '#E6EAF8', muted: '#4B5563',
   amber: '#D97706',
 };
 
@@ -42,7 +42,7 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
       const response = await withMinimumDelay(getPyqs(studentId), 2600);
       setPapers(response?.pyqs || []);
     } catch (err: any) {
-      console.error('Academics fetch error:', err);
+      console.warn('Academics fetch notice:', err);
       setError(err?.response?.data?.message || err?.message || 'Unable to connect to question paper archives. Please check your network.');
     } finally {
       setLoading(false);
@@ -86,8 +86,8 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
       const { uri } = await FileSystem.downloadAsync(url, fileUri);
       await Sharing.shareAsync(uri);
     } catch (err) {
-      Alert.alert('Error', 'Failed to download the PDF.');
-      console.error(err);
+      Alert.alert('Notice', 'Failed to download the PDF document.');
+      console.warn('PDF download notice:', err);
     }
   };
 
@@ -116,8 +116,8 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
         await Sharing.shareAsync(uri);
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to open the PDF viewer.');
-      console.error(err);
+      Alert.alert('Notice', 'Unable to open external PDF viewer.');
+      console.warn('PDF view notice:', err);
     }
   };
 
@@ -132,7 +132,7 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
       <View style={{ flex: 1, backgroundColor: C.surface, justifyContent: 'center' }}>
         <StatusBar barStyle="light-content" />
         <ErrorState
-          title="Digital Archives Offline"
+          title="Question Paper Archives Unavailable"
           message={error}
           onRetry={fetchPYQs}
         />
@@ -157,7 +157,7 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
           <View style={s.topRow}>
             <View>
               <Text style={s.brand}>TCEA Library</Text>
-              <Text style={s.brandSub}>Academics</Text>
+              <Text style={s.brandSub}>Question Papers</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable 
@@ -184,9 +184,9 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
 
           <View style={s.titleRow}>
             <View style={s.titleBar} />
-            <Text style={s.title}>Digital Archives</Text>
+            <Text style={s.title}>Previous Year Papers</Text>
           </View>
-          <Text style={s.subtitle}>Previous-year question papers</Text>
+          <Text style={s.subtitle}>TCEA Departmental Question Paper Archives</Text>
 
           <View style={s.search}>
             <Ionicons name="search" size={20} color={C.primary} />
@@ -194,8 +194,8 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
               style={s.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search subject name or paper code"
-              placeholderTextColor="#8A94A8"
+              placeholder="Search subject code, paper, or topics..."
+              placeholderTextColor="#5A6578"
               numberOfLines={1}
             />
           </View>
@@ -268,14 +268,14 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 22 },
   titleBar: { width: 6, height: 34, borderRadius: 3, backgroundColor: C.tertiary },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 30, color: '#fff', letterSpacing: -0.5 },
-  subtitle: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: '#C9D6E8', marginTop: 4, marginLeft: 18 },
+  subtitle: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: '#DCE7F5', marginTop: 4, marginLeft: 18 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 999, height: 56, paddingHorizontal: 18, marginTop: 18, ...shadow, shadowOpacity: 0.25 },
   searchInput: { flex: 1, fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14.5, color: C.neutral },
   listHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, marginTop: 22, marginBottom: 14 },
   count: { backgroundColor: C.navy, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 4 },
   countText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#fff' },
   empty: { alignItems: 'center', gap: 10, padding: 30 },
-  emptyText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: C.muted, textAlign: 'center' },
+  emptyText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: '#4B5563', textAlign: 'center' },
   card: { marginHorizontal: 20, marginBottom: 16, backgroundColor: '#fff', borderRadius: 26, padding: 18, ...shadow },
   cardTop: { flexDirection: 'row', gap: 14 },
   pdf: { width: 70, height: 88, borderRadius: 20, alignItems: 'center', justifyContent: 'center', shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
@@ -284,7 +284,7 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   codePill: { backgroundColor: '#FDE7E4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   codeText: { fontFamily: 'JetBrainsMono_700Bold', fontSize: 12.5, color: C.primary, letterSpacing: 0.5 },
-  year: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13, color: '#4B5C75' },
+  year: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13, color: '#1F2937' },
   paperTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 17, lineHeight: 22, color: C.neutral, marginTop: 8 },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   view: { flex: 1, height: 50, borderRadius: 999, borderWidth: 1.5, borderColor: C.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

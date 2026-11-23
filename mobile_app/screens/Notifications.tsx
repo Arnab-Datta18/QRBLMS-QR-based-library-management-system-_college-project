@@ -46,9 +46,9 @@ const C = {
   amberBg: '#FFF1DB',
   redTint: '#FDE7E4',
   paleBlue: '#E6EAF8',
-  muted: '#6B7280',
-  timeGrey: '#8A94A8',
-  labelGrey: '#4B5C75',
+  muted: '#4B5563',
+  timeGrey: '#5A6578',
+  labelGrey: '#374151',
   peach: '#FFB3A8',
   subtitleLight: '#C9D6E8',
 };
