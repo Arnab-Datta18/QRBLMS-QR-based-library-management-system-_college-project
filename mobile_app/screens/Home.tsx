@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -6,9 +6,9 @@ import {
   ScrollView, 
   RefreshControl, 
   Pressable,
-  Alert,
   StatusBar,
-  Modal
+  Modal,
+  Animated
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -28,6 +28,32 @@ const C = {
   surface: '#EEF1FB', card: '#FFFFFF', mint: '#D9F5E8', mintText: '#0F7A4B',
 };
 
+// Normalized semester formatting helpers to eliminate duplicate "Semester" / "th Sem"
+const formatSemester = (sem: any): string => {
+  if (!sem && sem !== 0) return '';
+  const str = String(sem).trim();
+  const numMatch = str.match(/\d+/);
+  if (numMatch) {
+    const n = parseInt(numMatch[0], 10);
+    const suffix = (n === 1) ? 'st' : (n === 2) ? 'nd' : (n === 3) ? 'rd' : 'th';
+    return `${n}${suffix} Sem`;
+  }
+  return str.replace(/Semester/gi, 'Sem').trim();
+};
+
+const formatSemesterFull = (sem: any): string => {
+  if (!sem && sem !== 0) return 'Semester';
+  const str = String(sem).trim();
+  const numMatch = str.match(/\d+/);
+  if (numMatch) {
+    const n = parseInt(numMatch[0], 10);
+    const suffix = (n === 1) ? 'st' : (n === 2) ? 'nd' : (n === 3) ? 'rd' : 'th';
+    return `${n}${suffix} Semester`;
+  }
+  if (/^semester/i.test(str)) return str;
+  return `Semester ${str}`;
+};
+
 const Chip = ({ icon, label, filled, accent }: any) => (
   <View style={[s.chip, filled && { backgroundColor: 'rgba(255,255,255,0.16)' }, accent && { backgroundColor: C.tertiary }]}>
     <Ionicons name={icon as any} size={14} color="#fff" />
@@ -45,6 +71,41 @@ export default function Home({ navigation: propNav }: any) {
   const [catalog, setCatalog] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [gatepassModalVisible, setGatepassModalVisible] = useState(false);
+
+  // Styled Auto-Dismiss Toast state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(-16)).current;
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hideToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    Animated.parallel([
+      Animated.timing(toastOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(toastTranslateY, { toValue: -16, duration: 180, useNativeDriver: true }),
+    ]).start(() => {
+      setToastMessage(null);
+    });
+  }, [toastOpacity, toastTranslateY]);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastMessage(msg);
+    Animated.parallel([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(toastTranslateY, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+
+    // Auto-dismiss after 2 seconds
+    toastTimerRef.current = setTimeout(() => {
+      hideToast();
+    }, 2000);
+  }, [hideToast, toastOpacity, toastTranslateY]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -130,13 +191,39 @@ export default function Home({ navigation: propNav }: any) {
   const handleCopyId = async () => {
     if (data?.student_id) {
       await Clipboard.setStringAsync(data.student_id);
-      Alert.alert('Success', 'Student ID copied to clipboard');
+      showToast(`Student ID "${data.student_id}" copied to clipboard`);
     }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>
       <StatusBar barStyle="light-content" />
+
+      {/* Styled Auto-Dismiss Toast Banner */}
+      {toastMessage && (
+        <Animated.View 
+          style={[
+            s.toastContainer, 
+            { 
+              top: Math.max(insets.top + 8, 48),
+              opacity: toastOpacity, 
+              transform: [{ translateY: toastTranslateY }] 
+            }
+          ]}
+        >
+          <Pressable style={s.toastBody} onPress={hideToast}>
+            <View style={s.toastIconWrap}>
+              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.toastTitle}>ID Copied to Clipboard</Text>
+              <Text style={s.toastSub} numberOfLines={1}>{toastMessage}</Text>
+            </View>
+            <Ionicons name="close" size={16} color="rgba(255,255,255,0.7)" />
+          </Pressable>
+        </Animated.View>
+      )}
+
       <ScrollView 
         contentContainerStyle={{ paddingBottom: 130 }} 
         showsVerticalScrollIndicator={false}
@@ -185,7 +272,7 @@ export default function Home({ navigation: propNav }: any) {
             <View style={{ flexDirection: 'row', gap: 8, paddingRight: 20 }}>
               <Chip icon="school-outline" label={data.course || 'Course'} filled />
               <Chip icon="laptop-outline" label={data.department || 'Dept'} filled />
-              <Chip icon="calendar-outline" label={`Semester ${data.semester || 'N'}`} accent />
+              <Chip icon="calendar-outline" label={formatSemesterFull(data.semester)} accent />
             </View>
           </ScrollView>
 
@@ -281,9 +368,13 @@ export default function Home({ navigation: propNav }: any) {
             return (
               <View key={book.book_id} style={[s.book, !isAvailable && { opacity: 0.6 }]}>
                 <View style={[s.spine, { backgroundColor: spineColor }]} />
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={s.bookTop}>
-                    <View style={s.tag}><Text style={[s.tag, { paddingHorizontal: 0, paddingVertical: 0 }]}>{data.department} / {data.semester}th Sem</Text></View>
+                    <View style={s.tag}>
+                      <Text style={s.tagText} numberOfLines={1} ellipsizeMode="tail">
+                        {data.department} • {formatSemester(data.semester)}
+                      </Text>
+                    </View>
                     <View style={[s.avail, !isAvailable && { backgroundColor: '#F3F4F6' }]}>
                       <Text style={[s.availText, !isAvailable && { color: '#6B7280' }]}>
                         {isAvailable ? 'Available' : 'Unavailable'}
@@ -291,16 +382,16 @@ export default function Home({ navigation: propNav }: any) {
                     </View>
                   </View>
                   
-                  <Text style={s.bookTitle} numberOfLines={1}>{book.title}</Text>
-                  <Text style={s.author} numberOfLines={1}>{book.author}</Text>
+                  <Text style={s.bookTitle} numberOfLines={2}>{book.title}</Text>
+                  <Text style={s.author} numberOfLines={1} ellipsizeMode="tail">{book.author}</Text>
                   
-                  {/* Informational book footer (Reservation button removed) */}
+                  {/* Informational book footer */}
                   <View style={s.bookBottom}>
-                    <Text style={s.ref}>Ref: {book.book_id}</Text>
+                    <Text style={s.ref} numberOfLines={1}>Ref: {book.book_id}</Text>
                     <View style={[s.infoBadge, isAvailable ? { backgroundColor: '#E8F5E9' } : { backgroundColor: '#F3F4F6' }]}>
                       <Ionicons 
                         name={isAvailable ? "checkmark-circle" : "close-circle"} 
-                        size={14} 
+                        size={13} 
                         color={isAvailable ? C.mintText : '#6B7280'} 
                       />
                       <Text style={[s.infoBadgeText, isAvailable ? { color: C.mintText } : { color: '#6B7280' }]}>
@@ -354,7 +445,7 @@ export default function Home({ navigation: propNav }: any) {
                   <Text style={s.gatepassBadgeText}>{data?.department || 'Dept'}</Text>
                 </View>
                 <View style={[s.gatepassBadge, { backgroundColor: C.mint }]}>
-                  <Text style={[s.gatepassBadgeText, { color: C.mintText }]}>Sem {data?.semester || '-'}</Text>
+                  <Text style={[s.gatepassBadgeText, { color: C.mintText }]}>{formatSemester(data?.semester)}</Text>
                 </View>
               </View>
             </View>
@@ -426,18 +517,19 @@ const s = StyleSheet.create({
   count: { backgroundColor: C.navy, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2 },
   countText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#fff' },
   viewAll: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14, color: C.primary },
-  book: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 12, backgroundColor: C.card, borderRadius: 22, overflow: 'hidden', ...shadow, shadowOpacity: 0.08 },
-  spine: { width: 8 },
-  bookTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, paddingHorizontal: 14 },
-  tag: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5, color: C.navy, backgroundColor: '#E6EAF8', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
-  avail: { backgroundColor: C.mint, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
-  availText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5, color: C.mintText },
-  bookTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 17, color: C.neutral, marginTop: 10, paddingHorizontal: 14 },
+  book: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 14, backgroundColor: C.card, borderRadius: 22, overflow: 'hidden', ...shadow, shadowOpacity: 0.08 },
+  spine: { width: 7 },
+  bookTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, paddingHorizontal: 14, gap: 8 },
+  tag: { flexShrink: 1, backgroundColor: '#E6EAF8', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
+  tagText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, color: C.navy },
+  avail: { flexShrink: 0, backgroundColor: C.mint, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 },
+  availText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11, color: C.mintText },
+  bookTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 16.5, lineHeight: 22, color: C.neutral, marginTop: 8, paddingHorizontal: 14 },
   author: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, color: '#6B7280', paddingHorizontal: 14, marginTop: 2 },
-  bookBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, paddingTop: 12 },
-  ref: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12.5, color: '#6B7280' },
-  infoBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
-  infoBadgeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 },
+  bookBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, paddingTop: 10, gap: 8 },
+  ref: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#6B7280', flexShrink: 1 },
+  infoBadge: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  infoBadgeText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 11.5 },
   gatepassOverlay: { flex: 1, backgroundColor: 'rgba(7, 27, 49, 0.78)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   gatepassCard: { backgroundColor: '#FFFFFF', borderRadius: 32, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center', ...shadow, shadowRadius: 30 },
   gatepassTop: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginBottom: 16 },
@@ -457,4 +549,49 @@ const s = StyleSheet.create({
   gatepassFooterHint: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 16, lineHeight: 18, paddingHorizontal: 10 },
   gatepassDoneBtn: { backgroundColor: C.navy, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', marginTop: 18 },
   gatepassDoneText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15, color: '#FFFFFF' },
+
+  /* Toast Styles */
+  toastContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    alignItems: 'center',
+    shadowColor: '#071B31',
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
+  toastBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#071B31',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    width: '100%',
+  },
+  toastIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toastTitle: {
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 13.5,
+    color: '#FFFFFF',
+  },
+  toastSub: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 12,
+    color: '#C9D6E8',
+    marginTop: 1,
+  },
 });

@@ -30,6 +30,7 @@ class Paper(db.Model):
     dept = db.Column(db.String(50))
     semester = db.Column(db.String(20))
     filename = db.Column(db.String(100))
+    year = db.Column(db.String(10), default='2025')
 
 class IssueRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)

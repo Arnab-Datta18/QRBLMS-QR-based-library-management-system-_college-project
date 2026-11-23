@@ -198,7 +198,6 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
               placeholderTextColor="#8A94A8"
               numberOfLines={1}
             />
-            <View style={s.mic}><Ionicons name="mic-outline" size={18} color="#fff" /></View>
           </View>
         </LinearGradient>
 
@@ -225,13 +224,9 @@ export default function AcademicsScreen({ navigation: propNav }: any) {
                 <View style={{ flex: 1 }}>
                   <View style={s.metaRow}>
                     <View style={s.codePill}><Text style={s.codeText}>{p.subject || 'PYQ'}</Text></View>
-                    <Text style={s.year}>Year {p.year || '2025'}</Text>
+                    <Text style={s.year}>{p.year && p.year !== 'N/A' ? `Year ${p.year}` : 'Year 2025'}</Text>
                   </View>
                   <Text style={s.paperTitle} numberOfLines={2}>{p.title || 'Unknown Paper'}</Text>
-                  <View style={s.examRow}>
-                    <View style={[s.examDot, { backgroundColor: (p.exam && p.exam.startsWith('Mid')) ? C.primary : C.amber }]} />
-                    <Text style={s.examText}>{p.exam || 'End-Semester Examination'}</Text>
-                  </View>
                 </View>
               </View>
 
@@ -274,9 +269,8 @@ const s = StyleSheet.create({
   titleBar: { width: 6, height: 34, borderRadius: 3, backgroundColor: C.tertiary },
   title: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 30, color: '#fff', letterSpacing: -0.5 },
   subtitle: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14, color: '#C9D6E8', marginTop: 4, marginLeft: 18 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 999, height: 56, paddingLeft: 18, paddingRight: 8, marginTop: 18, ...shadow, shadowOpacity: 0.25 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 999, height: 56, paddingHorizontal: 18, marginTop: 18, ...shadow, shadowOpacity: 0.25 },
   searchInput: { flex: 1, fontFamily: 'PlusJakartaSans_500Medium', fontSize: 14.5, color: C.neutral },
-  mic: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
   listHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, marginTop: 22, marginBottom: 14 },
   count: { backgroundColor: C.navy, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 4 },
   countText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12, color: '#fff' },
@@ -291,10 +285,7 @@ const s = StyleSheet.create({
   codePill: { backgroundColor: '#FDE7E4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   codeText: { fontFamily: 'JetBrainsMono_700Bold', fontSize: 12.5, color: C.primary, letterSpacing: 0.5 },
   year: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 13, color: '#4B5C75' },
-  paperTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 18, lineHeight: 23, color: C.neutral, marginTop: 8 },
-  examRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
-  examDot: { width: 8, height: 8, borderRadius: 4 },
-  examText: { fontFamily: 'PlusJakartaSans_500Medium', fontSize: 13, color: C.muted },
+  paperTitle: { fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 17, lineHeight: 22, color: C.neutral, marginTop: 8 },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   view: { flex: 1, height: 50, borderRadius: 999, borderWidth: 1.5, borderColor: C.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   viewText: { fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14.5, color: C.navy },

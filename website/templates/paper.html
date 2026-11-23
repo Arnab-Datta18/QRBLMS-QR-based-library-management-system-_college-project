@@ -575,8 +575,20 @@
                                 <option value="" disabled selected>Semester</option>
                             </select>
                         </div>
+                        <div class="col-12 col-md-2">
+                            <select name="year" id="yearSelect" class="form-select" style="text-overflow: ellipsis; white-space: nowrap; padding-right: 2.25rem !important;" required>
+                                <option value="" disabled selected>Year</option>
+                                <option value="2026">2026</option>
+                                <option value="2025" selected>2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                                <option value="2021">2021</option>
+                                <option value="2020">2020</option>
+                            </select>
+                        </div>
 
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-2">
                             <input type="file" name="file" class="form-control" required>
                         </div>
                         <div class="col-12 col-md-2">
@@ -607,6 +619,7 @@
                                     <th>Course</th>
                                     <th>Department</th>
                                     <th>Semester</th>
+                                    <th>Year</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
@@ -620,6 +633,7 @@
                                     <td class="align-middle"><span class="badge bg-secondary px-2 py-1">{{ p.course }}</span></td>
                                     <td class="align-middle"><span class="badge bg-dark px-2 py-1">{{ p.dept }}</span></td>
                                     <td class="align-middle"><span class="fw-medium text-muted">{{ p.semester }}</span></td>
+                                    <td class="align-middle"><span class="badge bg-danger px-2 py-1">{{ p.year or '2025' }}</span></td>
 
                                     <td class="text-end align-middle">
                                         <div class="d-flex justify-content-end gap-1">
@@ -650,7 +664,8 @@
                                     <i class="bi bi-file-earmark-pdf-fill doc-icon"></i>
                                     <div class="text-end">
                                         <span class="badge bg-secondary mb-1">{{ p.course }}</span><br>
-                                        <span class="badge bg-dark">{{ p.dept }} - Sem {{ p.semester }}</span>
+                                        <span class="badge bg-dark mb-1">{{ p.dept }} - Sem {{ p.semester }}</span><br>
+                                        <span class="badge bg-danger">Year {{ p.year or '2025' }}</span>
                                     </div>
                                 </div>
                                 <h3 class="h6 fw-bold text-dark mb-3 doc-filename">{{ p.filename }}</h3>

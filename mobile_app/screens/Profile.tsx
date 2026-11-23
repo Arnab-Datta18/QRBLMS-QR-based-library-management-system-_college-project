@@ -54,6 +54,18 @@ const C = {
   peach: '#FFB3A8',
 };
 
+const formatSemesterFull = (sem: any) => {
+  if (!sem) return '5th Semester';
+  const str = String(sem).trim();
+  const match = str.match(/\d+/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    const suffix = num === 1 ? 'st' : num === 2 ? 'nd' : num === 3 ? 'rd' : 'th';
+    return `${num}${suffix} Semester`;
+  }
+  return str;
+};
+
 interface ProfileProps {
   navigation?: any;
   onLogout?: () => void;
@@ -120,7 +132,7 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
   const fullName = data?.name || data?.student_name || 'Arnab Datta';
   const course = data?.course || 'Diploma in Engineering';
   const department = data?.department || 'Computer Science & Technology (CST)';
-  const semester = data?.semester || '5th Semester';
+  const semester = formatSemesterFull(data?.semester || '5th Semester');
   const email = data?.email || 'student@tcea.edu.in';
   const activeLoans = data?.active_loans_count ?? (data?.active_issues ? data.active_issues.length : 3);
   const totalDues = data?.total_dues ?? data?.total_fine ?? 0;

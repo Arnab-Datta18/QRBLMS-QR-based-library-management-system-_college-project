@@ -612,12 +612,17 @@ def upload_paper():
     course = request.form.get('course') 
     dept = request.form.get('dept')
     sem = request.form.get('sem')
+    year = request.form.get('year', '2025')
+    if not year or not year.strip():
+        year = '2025'
+    else:
+        year = year.strip()
 
     if file and file.filename != '':
         try:
             filename = secure_filename(file.filename)
             file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-            new_paper = Paper(course=course, dept=dept, semester=sem, filename=filename)
+            new_paper = Paper(course=course, dept=dept, semester=sem, filename=filename, year=year)
             db.session.add(new_paper)
             db.session.commit()
             try:

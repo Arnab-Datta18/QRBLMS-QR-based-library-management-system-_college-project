@@ -648,7 +648,7 @@ def api_pyq(student_id):
             "paper_id": p.id,
             "title": p.filename,
             "subject": f"{p.dept} Sem {p.semester}",
-            "year": "N/A",
+            "year": str(p.year) if getattr(p, 'year', None) else "2025",
             "pdf_url": f"/static/uploads/{p.filename}"
         })
     return jsonify({"pyqs": pyqs}), 200

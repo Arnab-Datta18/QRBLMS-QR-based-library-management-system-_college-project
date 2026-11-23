@@ -97,6 +97,14 @@ if __name__ == '__main__':
                 db.session.rollback()
             # --- END MIGRATION FOR STUDENT TABLE ---
 
+            # --- START MIGRATION FOR PAPER TABLE ---
+            try:
+                db.session.execute(text("ALTER TABLE paper ADD COLUMN year VARCHAR(10) DEFAULT '2025'"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            # --- END MIGRATION FOR PAPER TABLE ---
+
             if not Librarian.query.filter_by(id='admin').first():
                 # Hash default admin password
                 hashed_pw = generate_password_hash('1234')

@@ -351,7 +351,6 @@ export const AcademicsSkeleton: React.FC = () => {
                 <Skeleton width={60} height={14} borderRadius={4} />
               </View>
               <Skeleton width="85%" height={16} borderRadius={4} />
-              <Skeleton width="55%" height={12} borderRadius={4} style={{ marginTop: 8 }} />
             </View>
           </View>
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
