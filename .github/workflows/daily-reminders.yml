@@ -1,0 +1,30 @@
+name: Daily Library Reminder Notifications
+
+on:
+  schedule:
+    # 02:30 UTC = 8:00 AM IST (Indian Standard Time) every morning
+    - cron: '30 2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions dashboard anytime
+
+jobs:
+  trigger-daily-notifications:
+    name: Trigger Due & Overdue Daily Push Notifications
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Trigger Request to Production Server
+        run: |
+          # Use GitHub secret if configured, otherwise fallback to default secret
+          SECRET="${{ secrets.CRON_SECRET }}"
+          if [ -z "$SECRET" ]; then
+            SECRET="qrblms-library-cron-secret-2026"
+          fi
+
+          echo "Triggering TCEA Library daily notifications..."
+          RESPONSE=$(curl -fsS -X POST "https://qrblms.pythonanywhere.com/api/cron/daily-notifications" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: $SECRET" \
+            --retry 3 \
+            --retry-delay 5)
+
+          echo "Response from server:"
+          echo "$RESPONSE"

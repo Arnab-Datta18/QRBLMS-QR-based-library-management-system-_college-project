@@ -806,6 +806,51 @@ def api_test_push_notification():
         "result": result
     }), 200
 
+DEFAULT_CRON_SECRET = "qrblms-library-cron-secret-2026"
+
+@api_bp.route('/cron/daily-notifications', methods=['GET', 'POST'])
+def api_cron_daily_notifications():
+    """
+    Cron trigger for automated daily library push notifications.
+    Supports GET for status check and POST (protected by X-Cron-Secret or Authorization Bearer)
+    to execute daily advance due reminders and overdue alerts.
+    """
+    if request.method == 'GET':
+        return jsonify({
+            "status": "ok",
+            "message": "Daily notifications cron endpoint is active. Use POST with X-Cron-Secret or Bearer token to execute.",
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }), 200
+
+    configured_secret = os.environ.get('CRON_SECRET', DEFAULT_CRON_SECRET).strip()
+
+    header_secret = request.headers.get('X-Cron-Secret', '').strip()
+    auth_header = request.headers.get('Authorization', '').strip()
+    bearer_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+
+    provided_secret = header_secret or bearer_token
+
+    if not provided_secret or provided_secret != configured_secret:
+        return jsonify({
+            "status": "error",
+            "message": "Unauthorized: Invalid or missing cron secret"
+        }), 401
+
+    try:
+        from scripts.daily_notifications import run_daily_notifications
+        summary = run_daily_notifications()
+        return jsonify({
+            "status": "success",
+            "message": "Daily notifications executed successfully",
+            "summary": summary
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error executing daily notifications cron: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 @api_bp.route('/books/catalog/<student_id>', methods=['GET'])
 def api_catalog(student_id):
     """Returns inventory automatically filtered by the student's demographics."""
