@@ -38,7 +38,38 @@ class IssueRecord(db.Model):
     student_id = db.Column(db.String(50), db.ForeignKey('student.id'))
     action = db.Column(db.String(20))  # 'Issue' or 'Return'
     timestamp = db.Column(db.DateTime, default=datetime.datetime.now)
+    due_date = db.Column(db.DateTime, nullable=True)
+    renewal_count = db.Column(db.Integer, default=0)
     fine_paid = db.Column(db.Integer, default=0)
+
+class RenewalRequest(db.Model):
+    __tablename__ = 'renewal_request'
+    id = db.Column(db.Integer, primary_key=True)
+    loan_id = db.Column(db.Integer, db.ForeignKey('issue_record.id'), nullable=False, index=True)
+    student_id = db.Column(db.String(50), db.ForeignKey('student.id'), nullable=False, index=True)
+    book_id = db.Column(db.String(50), db.ForeignKey('book.id'), nullable=False, index=True)
+    requested_days = db.Column(db.Integer, nullable=False)
+    current_due_date = db.Column(db.DateTime, nullable=False)
+    proposed_due_date = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), default='pending', nullable=False, index=True)  # 'pending', 'approved', 'rejected', 'cancelled'
+    librarian_note = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, index=True)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'loan_id': self.loan_id,
+            'student_id': self.student_id,
+            'book_id': self.book_id,
+            'requested_days': self.requested_days,
+            'current_due_date': self.current_due_date.strftime('%Y-%m-%d') if self.current_due_date else None,
+            'proposed_due_date': self.proposed_due_date.strftime('%Y-%m-%d') if self.proposed_due_date else None,
+            'status': self.status,
+            'librarian_note': self.librarian_note,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
+            'resolved_at': self.resolved_at.strftime('%Y-%m-%d %H:%M:%S') if self.resolved_at else None,
+        }
 
 class Notification(db.Model):
     __tablename__ = 'notification'

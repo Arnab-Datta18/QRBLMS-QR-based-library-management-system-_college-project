@@ -62,6 +62,28 @@ def create_app():
                 except Exception:
                     db.session.rollback()
 
+            # Ensure issue_record columns exist for loan renewal tracking
+            issue_cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(issue_record)")).fetchall()]
+            if 'due_date' not in issue_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE issue_record ADD COLUMN due_date DATETIME"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            if 'renewal_count' not in issue_cols:
+                try:
+                    db.session.execute(text("ALTER TABLE issue_record ADD COLUMN renewal_count INTEGER DEFAULT 0"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            # Populate due_date for any existing active issues lacking an explicit due date
+            try:
+                db.session.execute(text("UPDATE issue_record SET due_date = datetime(timestamp, '+14 days') WHERE action = 'Issue' AND due_date IS NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
             # Ensure default admin account exists
             try:
                 if not Librarian.query.filter_by(id='admin').first():

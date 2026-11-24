@@ -6,10 +6,13 @@ from io import StringIO
 from flask import Blueprint, render_template, request, redirect, session, url_for, jsonify, Response, flash, make_response, current_app
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
-from models import Book, Student, Paper, IssueRecord, db, log_audit
+from models import Book, Student, Paper, IssueRecord, RenewalRequest, db, log_audit
 from services.scanner import camera_manager, gen_frames
 from sqlalchemy import func
-from notification_service import notify_issue_book, notify_return_book, notify_new_paper, notify_new_book
+from notification_service import (
+    notify_issue_book, notify_return_book, notify_new_paper, notify_new_book,
+    notify_renewal_approved, notify_renewal_rejected
+)
 
 web_bp = Blueprint('web', __name__)
 
@@ -79,6 +82,37 @@ def lib_dash():
     diploma_books = Book.query.filter_by(course='Diploma').count()
     mtech_books = Book.query.filter_by(course='M.Tech').count()
 
+    # Query loan renewal requests
+    renewal_requests = RenewalRequest.query.order_by(RenewalRequest.created_at.desc()).all()
+    student_ids = list({r.student_id for r in renewal_requests})
+    book_ids = list({r.book_id for r in renewal_requests})
+    students_map = {s.id: s for s in Student.query.filter(Student.id.in_(student_ids)).all()} if student_ids else {}
+    books_map = {b.id: b for b in Book.query.filter(Book.id.in_(book_ids)).all()} if book_ids else {}
+
+    renewals_data = []
+    pending_renewals_count = 0
+    for r in renewal_requests:
+        if r.status == 'pending':
+            pending_renewals_count += 1
+        s = students_map.get(r.student_id)
+        b = books_map.get(r.book_id)
+        renewals_data.append({
+            'id': r.id,
+            'loan_id': r.loan_id,
+            'student_id': r.student_id,
+            'student_name': s.name if s else r.student_id,
+            'student_dept': f"{s.course} {s.dept} (Sem {s.semester})" if s else "",
+            'book_id': r.book_id,
+            'book_title': b.title if b else r.book_id,
+            'requested_days': r.requested_days,
+            'current_due_date': r.current_due_date.strftime('%Y-%m-%d') if r.current_due_date else '',
+            'proposed_due_date': r.proposed_due_date.strftime('%Y-%m-%d') if r.proposed_due_date else '',
+            'status': r.status,
+            'librarian_note': r.librarian_note or '',
+            'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+            'resolved_at': r.resolved_at.strftime('%Y-%m-%d %H:%M') if r.resolved_at else ''
+        })
+
     return render_template('lib_dash.html',
                            total_physical=total_physical,
                            total_unique=total_unique,
@@ -89,7 +123,9 @@ def lib_dash():
                            fines_month=fines_collected,
                            btech_books=btech_books,
                            diploma_books=diploma_books,
-                           mtech_books=mtech_books)
+                           mtech_books=mtech_books,
+                           renewals=renewals_data,
+                           pending_renewals_count=pending_renewals_count)
 
 @web_bp.route('/stu_dash')
 def stu_dash():
@@ -363,7 +399,15 @@ def process_transaction():
 
             if book.available > 0:
                 book.available -= 1
-                new_rec = IssueRecord(book_id=bid, student_id=sid, action='Issue')
+                issue_now = datetime.datetime.now()
+                new_rec = IssueRecord(
+                    book_id=bid,
+                    student_id=sid,
+                    action='Issue',
+                    timestamp=issue_now,
+                    due_date=issue_now + datetime.timedelta(days=14),
+                    renewal_count=0
+                )
                 db.session.add(new_rec)
                 db.session.commit()
                 try:
@@ -378,12 +422,19 @@ def process_transaction():
                 return jsonify({"status": "error", "message": f"{student.name} does not have this book to return!"})
 
             last_issue = IssueRecord.query.filter_by(student_id=sid, book_id=bid, action='Issue').order_by(IssueRecord.timestamp.desc()).first()
-            days_held = (datetime.datetime.now() - last_issue.timestamp).days
+            if last_issue and last_issue.due_date:
+                effective_due = last_issue.due_date
+            elif last_issue:
+                effective_due = last_issue.timestamp + datetime.timedelta(days=14)
+            else:
+                effective_due = datetime.datetime.now()
+
+            today = datetime.datetime.now()
             fine_amount = 0
             days_late = 0
 
-            if days_held > 14:
-                days_late = days_held - 14
+            if today > effective_due:
+                days_late = (today - effective_due).days
                 fine_amount = days_late * 5
 
             if fine_amount > 0 and not fine_status:
@@ -399,6 +450,14 @@ def process_transaction():
             book.available += 1
             new_rec = IssueRecord(book_id=bid, student_id=sid, action='Return', fine_paid=actual_fine_paid)
             db.session.add(new_rec)
+
+            # Auto-cancel any pending renewal requests for this loan/book
+            pending_renewals = RenewalRequest.query.filter_by(student_id=sid, book_id=bid, status='pending').all()
+            for pr in pending_renewals:
+                pr.status = 'cancelled'
+                pr.librarian_note = 'Auto-cancelled upon book return'
+                pr.resolved_at = datetime.datetime.now()
+
             db.session.commit()
             try:
                 notify_return_book(sid, book, fine_paid=actual_fine_paid)
@@ -420,6 +479,137 @@ def process_transaction():
         print(f"TRANSACTION ERROR: {str(e)}")
         db.session.rollback()
         return jsonify({"status": "error", "message": f"Backend Error: {str(e)}"})
+    finally:
+        db.session.remove()
+
+@web_bp.route('/renewals/<int:request_id>/approve', methods=['POST'])
+def approve_renewal(request_id):
+    if session.get('role') != 'librarian':
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+        flash("Unauthorized access.")
+        return redirect(url_for('auth.login'))
+
+    req = RenewalRequest.query.get(request_id)
+    if not req:
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Renewal request not found'}), 404
+        flash("Renewal request not found.")
+        return redirect(url_for('web.lib_dash'))
+
+    if req.status != 'pending':
+        msg = f"Request #{request_id} is already {req.status}."
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg}), 400
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
+
+    loan = IssueRecord.query.get(req.loan_id) if req.loan_id else None
+    if not loan:
+        loan = IssueRecord.query.filter_by(student_id=req.student_id, book_id=req.book_id, action='Issue').order_by(IssueRecord.timestamp.desc()).first()
+
+    if not loan:
+        msg = "Active loan record not found for this request."
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg}), 404
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
+
+    try:
+        new_due_date = req.proposed_due_date or (loan.due_date + datetime.timedelta(days=req.requested_days) if loan.due_date else loan.timestamp + datetime.timedelta(days=14 + req.requested_days))
+        loan.due_date = new_due_date
+        loan.renewal_count = (loan.renewal_count or 0) + 1
+
+        req.status = 'approved'
+        req.resolved_at = datetime.datetime.now()
+        librarian_uid = session.get('uid', 'librarian')
+        log_audit(librarian_uid, "Approve Renewal", f"Approved {req.requested_days} days extension for student {req.student_id}, book {req.book_id}. New due date: {new_due_date.strftime('%Y-%m-%d')}.")
+
+        db.session.commit()
+
+        # Send in-app notification to student
+        book = Book.query.get(req.book_id)
+        try:
+            notify_renewal_approved(req.student_id, book, req.requested_days, new_due_date)
+        except Exception as notif_err:
+            print(f"Error sending renewal approved notification: {notif_err}")
+
+        msg = f"Renewal request #{req.id} approved successfully. Due date extended to {new_due_date.strftime('%Y-%m-%d')}."
+        if request.is_json:
+            return jsonify({'status': 'success', 'message': msg, 'new_due_date': new_due_date.strftime('%Y-%m-%d')})
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
+    except Exception as e:
+        db.session.rollback()
+        msg = f"Error approving renewal: {str(e)}"
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg}), 500
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
+    finally:
+        db.session.remove()
+
+@web_bp.route('/renewals/<int:request_id>/reject', methods=['POST'])
+def reject_renewal(request_id):
+    if session.get('role') != 'librarian':
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+        flash("Unauthorized access.")
+        return redirect(url_for('auth.login'))
+
+    req = RenewalRequest.query.get(request_id)
+    if not req:
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Renewal request not found'}), 404
+        flash("Renewal request not found.")
+        return redirect(url_for('web.lib_dash'))
+
+    if req.status != 'pending':
+        msg = f"Request #{request_id} is already {req.status}."
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg}), 400
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
+
+    reason = ""
+    if request.is_json:
+        data = request.get_json() or {}
+        reason = data.get('reason', '').strip()
+    else:
+        reason = request.form.get('reason', '').strip()
+
+    if not reason:
+        reason = "Rejected by librarian"
+
+    try:
+        req.status = 'rejected'
+        req.librarian_note = reason
+        req.resolved_at = datetime.datetime.now()
+        librarian_uid = session.get('uid', 'librarian')
+        log_audit(librarian_uid, "Reject Renewal", f"Rejected renewal request #{req.id} for student {req.student_id}, book {req.book_id}. Reason: {reason}")
+
+        db.session.commit()
+
+        # Send in-app notification to student
+        book = Book.query.get(req.book_id)
+        current_due = req.current_due_date
+        try:
+            notify_renewal_rejected(req.student_id, book, reason, current_due)
+        except Exception as notif_err:
+            print(f"Error sending renewal rejected notification: {notif_err}")
+
+        msg = f"Renewal request #{req.id} rejected."
+        if request.is_json:
+            return jsonify({'status': 'success', 'message': msg})
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
+    except Exception as e:
+        db.session.rollback()
+        msg = f"Error rejecting renewal: {str(e)}"
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg}), 500
+        flash(msg)
+        return redirect(url_for('web.lib_dash'))
     finally:
         db.session.remove()
 

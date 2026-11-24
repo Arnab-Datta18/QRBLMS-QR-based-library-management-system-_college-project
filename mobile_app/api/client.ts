@@ -101,4 +101,17 @@ export const uploadAvatar = async (
   return response.data;
 };
 
+export const requestBookRenewal = async (
+  studentId: string,
+  loanId: number | string,
+  requestedDays: number
+) => {
+  const response = await apiClient.post('/student/renew-loan', {
+    student_id: studentId,
+    loan_id: loanId,
+    requested_days: requestedDays,
+  });
+  return response.data;
+};
+
 export default apiClient;

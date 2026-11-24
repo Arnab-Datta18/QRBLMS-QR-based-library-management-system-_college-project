@@ -4,7 +4,7 @@ import os
 import io
 import json
 from flask import Blueprint, jsonify, request, current_app
-from models import Student, Book, IssueRecord, Paper, Notification, db, log_audit
+from models import Student, Book, IssueRecord, Paper, Notification, RenewalRequest, db, log_audit
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -317,7 +317,7 @@ def api_student_dashboard(student_id):
         last_issue = IssueRecord.query.filter_by(student_id=student_id, book_id=b.id, action='Issue').order_by(IssueRecord.timestamp.desc()).first()
         if last_issue:
             issue_date = last_issue.timestamp
-            due_date = issue_date + datetime.timedelta(days=14)
+            due_date = getattr(last_issue, 'due_date', None) or (issue_date + datetime.timedelta(days=14))
             today = datetime.datetime.now()
 
             is_overdue = False
@@ -328,13 +328,25 @@ def api_student_dashboard(student_id):
                 fine = days_late * 5
 
             total_fine += fine
+
+            # Track renewal metadata & latest request
+            ren_count = getattr(last_issue, 'renewal_count', 0) or 0
+            latest_renewal = RenewalRequest.query.filter_by(loan_id=last_issue.id).order_by(RenewalRequest.created_at.desc()).first()
+            has_pending = (latest_renewal is not None and latest_renewal.status == 'pending')
+            can_renew = (not is_overdue) and (ren_count < 1) and (not has_pending)
+
             active_issues.append({
                 'issue_id': last_issue.id,
+                'book_id': b.id,
                 'book_name': b.title,
                 'author': b.author,
                 'issue_date': issue_date.strftime('%Y-%m-%d'),
                 'due_date': due_date.strftime('%Y-%m-%d'),
                 'is_overdue': is_overdue,
+                'renewal_count': ren_count,
+                'max_renewals': 1,
+                'can_renew': can_renew,
+                'latest_renewal': latest_renewal.to_dict() if latest_renewal else None,
                 'qr_code_string': f"BOOK:{b.id}"
             })
 
@@ -400,6 +412,113 @@ def api_student_dashboard(student_id):
         "qr_payload": f"STUDENT:{student_id}",
         "active_issues": active_issues
     }), 200
+
+# --- BOOK LOAN RENEWAL REQUEST ENDPOINT ---
+
+@api_bp.route('/student/renew-loan', methods=['POST'])
+def api_renew_loan():
+    """
+    Submits a book loan renewal request by student for librarian approval.
+    Enforces all institutional guardrails (max 1 renewal, non-overdue, 1-180 days).
+    """
+    data = request.get_json() or {}
+    student_id = data.get('student_id')
+    loan_id = data.get('loan_id')
+    book_id = data.get('book_id')
+    raw_days = data.get('requested_days')
+
+    if not student_id:
+        return jsonify({"status": "error", "message": "Student ID is required."}), 400
+
+    student = Student.query.get(student_id)
+    if not student:
+        return jsonify({"status": "error", "message": "Student record not found."}), 404
+
+    # Validate requested extension duration (1 to 180 days)
+    try:
+        requested_days = int(raw_days)
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "Requested extension days must be a valid integer between 1 and 180."}), 400
+
+    if requested_days < 1 or requested_days > 180:
+        return jsonify({"status": "error", "message": "Requested extension days must be between 1 and 180 days."}), 400
+
+    # Locate active loan record
+    loan = None
+    if loan_id:
+        loan = IssueRecord.query.get(loan_id)
+        if loan and (loan.student_id != student_id or loan.action != 'Issue'):
+            loan = None
+
+    if not loan and book_id:
+        loan = IssueRecord.query.filter_by(student_id=student_id, book_id=book_id, action='Issue').order_by(IssueRecord.timestamp.desc()).first()
+
+    if not loan:
+        return jsonify({"status": "error", "message": "No active loan record found for this book."}), 404
+
+    # Verify student is currently holding this book (issues > returns)
+    issues_count = IssueRecord.query.filter_by(student_id=student_id, book_id=loan.book_id, action='Issue').count()
+    returns_count = IssueRecord.query.filter_by(student_id=student_id, book_id=loan.book_id, action='Return').count()
+    if issues_count <= returns_count:
+        return jsonify({"status": "error", "message": "This book has already been returned and cannot be renewed."}), 400
+
+    # Calculate current due date
+    current_due_date = getattr(loan, 'due_date', None) or (loan.timestamp + datetime.timedelta(days=14))
+    now = datetime.datetime.now()
+
+    # Guardrail 1: Reject if already overdue
+    if now > current_due_date:
+        return jsonify({
+            "status": "error",
+            "message": "Overdue books cannot be renewed. Please visit the library counter."
+        }), 400
+
+    # Guardrail 2: Reject if renewal limit reached (max 1 renewal)
+    renewal_count = getattr(loan, 'renewal_count', 0) or 0
+    if renewal_count >= 1:
+        return jsonify({
+            "status": "error",
+            "message": "Renewal limit reached (maximum 1 renewal per issued book)."
+        }), 400
+
+    # Guardrail 3: Reject if a pending renewal request already exists
+    pending_request = RenewalRequest.query.filter_by(loan_id=loan.id, status='pending').first()
+    if pending_request:
+        return jsonify({
+            "status": "error",
+            "message": "A renewal request is already pending librarian approval."
+        }), 400
+
+    # Compute proposed new return date
+    proposed_due_date = current_due_date + datetime.timedelta(days=requested_days)
+
+    try:
+        new_renewal = RenewalRequest(
+            loan_id=loan.id,
+            student_id=student_id,
+            book_id=loan.book_id,
+            requested_days=requested_days,
+            current_due_date=current_due_date,
+            proposed_due_date=proposed_due_date,
+            status='pending',
+            created_at=datetime.datetime.utcnow()
+        )
+        db.session.add(new_renewal)
+        db.session.commit()
+
+        log_audit(student_id, "Loan Renewal Requested", f"Requested {requested_days} days extension for book {loan.book_id} (Loan #{loan.id}).")
+
+        return jsonify({
+            "status": "success",
+            "message": f"Renewal request for +{requested_days} days submitted successfully.",
+            "renewal": new_renewal.to_dict(),
+            "renewal_request": new_renewal.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error submitting loan renewal: {e}")
+        return jsonify({"status": "error", "message": f"Failed to submit renewal request: {str(e)}"}), 500
 
 # --- NOTIFICATION ENGINE ENDPOINTS ---
 

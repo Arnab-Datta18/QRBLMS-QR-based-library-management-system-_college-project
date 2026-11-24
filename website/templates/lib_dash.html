@@ -274,6 +274,45 @@
         .input-group-custom .form-control { border-radius: 12px 0 0 12px; }
         .input-group-custom .form-control:focus { z-index: 0; border-color: #1e293b; box-shadow: 0 4px 15px rgba(30, 41, 59, 0.15); }
 
+        /* --- LOAN RENEWAL CONTROLS --- */
+        .renewal-chip {
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: #334155;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .renewal-chip:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+        .filter-pill-btn {
+            border-radius: 999px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+        .filter-pill-btn.active {
+            background: #1e293b;
+            color: #fff;
+            border-color: #1e293b;
+            box-shadow: 0 2px 8px rgba(30, 41, 59, 0.2);
+        }
+        .filter-pill-btn:hover:not(.active) {
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
         /* --- RESPONSIVE BREAKPOINTS --- */
         @media (min-width: 769px) {
             .mobile-topbar {
@@ -373,6 +412,12 @@
                     <!-- Task 2: MANAGE Category Label with enhanced spacing -->
                     <h6 class="mt-4 mb-2 ms-2 fw-bold text-muted tracking-wider text-uppercase sidebar-heading" style="font-size: 0.85rem;">MANAGE</h6>
                     <a href="{{ url_for('web.inventory') }}" class="nav-link"><i class="bi bi-box-seam"></i> Inventory</a>
+                    <a href="#renewalsSection" class="nav-link d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-arrow-repeat me-2"></i> Renewals</span>
+                        {% if pending_renewals_count > 0 %}
+                        <span class="badge bg-danger rounded-pill">{{ pending_renewals_count }}</span>
+                        {% endif %}
+                    </a>
                     <a href="{{ url_for('web.papers_page') }}" class="nav-link"><i class="bi bi-cloud-arrow-up"></i> PYQ Papers</a>
                     <a href="{{ url_for('web.print_qrs') }}" class="nav-link"><i class="bi bi-printer"></i> Print QR</a>
                 </nav>
@@ -515,6 +560,120 @@
                 </div>
             </div>
 
+            <!-- Loan Renewal Requests Section -->
+            <div class="row mb-4" id="renewalsSection">
+                <div class="col-12">
+                    <div class="glass-panel">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                            <div>
+                                <h2 class="h5 fw-bold text-dark mb-1 d-flex align-items-center">
+                                    <i class="bi bi-arrow-repeat me-2" style="color: #DA291C;"></i> Loan Renewal Requests
+                                    {% if pending_renewals_count > 0 %}
+                                    <span class="badge rounded-pill bg-danger ms-2 font-monospace">{{ pending_renewals_count }} Pending</span>
+                                    {% else %}
+                                    <span class="badge rounded-pill bg-secondary ms-2 font-monospace">0 Pending</span>
+                                    {% endif %}
+                                </h2>
+                                <p class="text-muted small mb-0">Review student requests to extend loan due dates (up to 180 days per semester policy).</p>
+                            </div>
+                            <!-- Filter Tabs -->
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="filter-pill-btn {% if pending_renewals_count > 0 %}active{% endif %}" onclick="filterRenewals('pending', this)">
+                                    Pending {% if pending_renewals_count > 0 %}<span class="badge bg-danger rounded-pill ms-1">{{ pending_renewals_count }}</span>{% endif %}
+                                </button>
+                                <button type="button" class="filter-pill-btn {% if pending_renewals_count == 0 %}active{% endif %}" onclick="filterRenewals('all', this)">
+                                    All ({{ renewals|length }})
+                                </button>
+                                <button type="button" class="filter-pill-btn" onclick="filterRenewals('approved', this)">
+                                    Approved
+                                </button>
+                                <button type="button" class="filter-pill-btn" onclick="filterRenewals('rejected', this)">
+                                    Rejected
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Renewal Requests List / Table -->
+                        {% if renewals %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="renewalsTable">
+                                <thead class="table-light">
+                                    <tr style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <th style="border-top-left-radius: 10px;">Student</th>
+                                        <th>Book</th>
+                                        <th>Current Due</th>
+                                        <th>Extension Requested</th>
+                                        <th>Status</th>
+                                        <th class="text-end" style="border-top-right-radius: 10px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in renewals %}
+                                    <tr class="renewal-row" data-status="{{ r.status }}">
+                                        <td>
+                                            <div class="fw-bold text-dark">{{ r.student_name }}</div>
+                                            <div class="small text-muted font-monospace">{{ r.student_id }} &bull; {{ r.student_dept }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark text-truncate" style="max-width: 250px;">{{ r.book_title }}</div>
+                                            <div class="small text-muted font-monospace">ID: {{ r.book_id }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border font-monospace">{{ r.current_due_date or 'N/A' }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-primary">+{{ r.requested_days }} days</div>
+                                            <div class="small text-muted">Proposed: <span class="font-monospace text-dark">{{ r.proposed_due_date }}</span></div>
+                                        </td>
+                                        <td>
+                                            {% if r.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="bi bi-clock me-1"></i> Pending</span>
+                                            {% elif r.status == 'approved' %}
+                                                <span class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-check-circle me-1"></i> Approved</span>
+                                                {% if r.resolved_at %}<div class="text-muted" style="font-size: 0.72rem;">{{ r.resolved_at }}</div>{% endif %}
+                                            {% elif r.status == 'rejected' %}
+                                                <span class="badge bg-danger px-3 py-2 rounded-pill"><i class="bi bi-x-circle me-1"></i> Rejected</span>
+                                                {% if r.librarian_note %}<div class="text-muted small fst-italic" style="font-size: 0.75rem; max-width: 180px;">"{{ r.librarian_note }}"</div>{% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary px-3 py-2 rounded-pill">{{ r.status|title }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if r.status == 'pending' %}
+                                            <div class="d-inline-flex gap-2">
+                                                <form action="{{ url_for('web.approve_renewal', request_id=r.id) }}" method="POST" class="d-inline" onsubmit="smartLoadingBtn(this.querySelector('button'), 'Approving...')">
+                                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 fw-bold">
+                                                        <i class="bi bi-check-lg me-1"></i> Approve
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" onclick="openRejectModal({{ r.id }}, '{{ r.student_name|escape }}', '{{ r.book_title|escape }}')">
+                                                    <i class="bi bi-x-lg me-1"></i> Reject
+                                                </button>
+                                            </div>
+                                            {% else %}
+                                            <span class="text-muted small fst-italic">Resolved</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noRenewalsFound" class="text-center py-4 text-muted d-none">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            No renewal requests in this category.
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-check2-circle fs-1 text-success d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">No Renewal Requests</h6>
+                            <p class="small mb-0">All student book loan renewal requests are up to date.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             <!-- Task 4 & 5: Reset Student Password with H2 and Slate Action -->
             <div class="row">
                 <div class="col-12">
@@ -534,6 +693,40 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Reject Renewal Modal -->
+    <div class="modal fade" id="rejectRenewalModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #DA291C, #b51f15);">
+                    <h5 class="modal-title fw-bold text-white mb-3 mt-2 ms-2"><i class="bi bi-x-circle-fill me-2"></i> Reject Renewal Request</h5>
+                    <button type="button" class="btn-close btn-close-white me-2 mb-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <p class="text-muted small mb-3">Provide a clear reason for rejecting the extension request for <strong id="rejectStudentName"></strong> (<span id="rejectBookTitle"></span>). This note will appear on the student's mobile dashboard.</p>
+
+                    <label class="text-secondary fw-bold small mb-2 d-block">Quick Reasons</label>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button type="button" class="renewal-chip" onclick="setRejectReason('Book in high demand')">Book in high demand</button>
+                        <button type="button" class="renewal-chip" onclick="setRejectReason('Maximum semester limit reached')">Maximum semester limit reached</button>
+                        <button type="button" class="renewal-chip" onclick="setRejectReason('Book needed for syllabus update')">Book needed for syllabus update</button>
+                        <button type="button" class="renewal-chip" onclick="setRejectReason('Please visit library desk')">Please visit library desk</button>
+                    </div>
+
+                    <form id="rejectRenewalForm" method="POST" action="" onsubmit="smartLoadingBtn(this.querySelector('button[type=submit]'), 'Rejecting...')">
+                        <div class="mb-3">
+                            <label class="text-secondary fw-bold small ms-1 mb-1">Reason / Librarian Note</label>
+                            <textarea id="rejectReasonInput" name="reason" rows="3" class="form-control bg-white shadow-sm" placeholder="Enter reason for rejection..." required></textarea>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-tcea-danger rounded-pill px-4">Confirm Rejection</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -697,6 +890,63 @@
             btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>${text}`;
             btn.classList.add('disabled');
         }
+
+        // --- LOAN RENEWAL FILTER & REJECTION MODAL HANDLERS ---
+        function openRejectModal(requestId, studentName, bookTitle) {
+            const modalEl = document.getElementById('rejectRenewalModal');
+            const form = document.getElementById('rejectRenewalForm');
+            const studentSpan = document.getElementById('rejectStudentName');
+            const bookSpan = document.getElementById('rejectBookTitle');
+            const reasonInput = document.getElementById('rejectReasonInput');
+
+            form.action = '/renewals/' + requestId + '/reject';
+            if (studentSpan) studentSpan.textContent = studentName;
+            if (bookSpan) bookSpan.textContent = bookTitle;
+            if (reasonInput) reasonInput.value = '';
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
+        function setRejectReason(reason) {
+            const input = document.getElementById('rejectReasonInput');
+            if (input) input.value = reason;
+        }
+
+        function filterRenewals(status, btn) {
+            document.querySelectorAll('.filter-pill-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const rows = document.querySelectorAll('.renewal-row');
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const rowStatus = row.getAttribute('data-status');
+                if (status === 'all' || rowStatus === status) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const noFound = document.getElementById('noRenewalsFound');
+            if (noFound) {
+                if (visibleCount === 0 && rows.length > 0) {
+                    noFound.classList.remove('d-none');
+                } else {
+                    noFound.classList.add('d-none');
+                }
+            }
+        }
+
+        // Auto-select filter on DOMContentLoaded
+        document.addEventListener("DOMContentLoaded", function() {
+            const pendingCount = {{ pending_renewals_count | default(0) }};
+            if (pendingCount > 0) {
+                const pendingBtn = document.querySelector('.filter-pill-btn');
+                filterRenewals('pending', pendingBtn);
+            }
+        });
     </script>
 </body>
 </html>

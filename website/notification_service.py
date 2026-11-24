@@ -83,7 +83,7 @@ def sync_student_loan_notifications(student_id):
             continue
 
         issue_date = last_issue.timestamp
-        due_date = issue_date + datetime.timedelta(days=14)
+        due_date = getattr(last_issue, 'due_date', None) or (issue_date + datetime.timedelta(days=14))
         due_date_date = due_date.date()
         due_date_str = due_date.strftime('%Y-%m-%d')
         due_date_display = due_date.strftime('%d %b %Y')
@@ -244,6 +244,52 @@ def notify_broadcast(title, body, important=False):
         )
         count += 1
     return count
+
+def notify_renewal_approved(student_id, book, requested_days, new_due_date):
+    """Notifies student when librarian approves loan renewal"""
+    due_str = new_due_date.strftime('%d %b %Y') if isinstance(new_due_date, (datetime.datetime, datetime.date)) else str(new_due_date)
+    book_title = book.title if book else "Book"
+    book_id = book.id if book else ""
+    title = "Loan Successfully Renewed"
+    body = f"Your loan for '{book_title}' has been extended by {requested_days} days. New due date is {due_str}."
+    return create_notification(
+        student_id=student_id,
+        notif_type='renewed',
+        title=title,
+        body=body,
+        channel_id='updates',
+        meta={
+            "chipText": f"+{requested_days} Days Extended",
+            "dueDate": due_str,
+            "route": "Borrowed",
+            "bookTitle": book_title,
+            "bookId": book_id
+        }
+    )
+
+def notify_renewal_rejected(student_id, book, reason, current_due_date):
+    """Notifies student when librarian rejects loan renewal"""
+    due_str = current_due_date.strftime('%d %b %Y') if isinstance(current_due_date, (datetime.datetime, datetime.date)) else str(current_due_date)
+    book_title = book.title if book else "Book"
+    book_id = book.id if book else ""
+    title = "Renewal Request Declined"
+    reason_text = f" ({reason})" if reason else ""
+    body = f"Your renewal request for '{book_title}' could not be approved{reason_text}. Please return the book by {due_str}."
+    return create_notification(
+        student_id=student_id,
+        notif_type='notice',
+        title=title,
+        body=body,
+        channel_id='updates',
+        meta={
+            "chipText": "Renewal Declined",
+            "dueDate": due_str,
+            "route": "Borrowed",
+            "bookTitle": book_title,
+            "bookId": book_id,
+            "reason": reason or ""
+        }
+    )
 
 def ensure_initial_notifications(student_id):
     """
