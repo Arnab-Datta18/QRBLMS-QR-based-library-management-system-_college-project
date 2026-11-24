@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, LogBox } from 'react-native';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import {
   useFonts,
   PlusJakartaSans_500Medium,
@@ -23,8 +24,13 @@ import Home from './screens/Home';
 import Academics from './screens/Academics';
 import Borrowed from './screens/Borrowed';
 import Profile from './screens/Profile';
-import Notifications from './screens/Notifications';
-import { clearTokens } from './api/auth';
+import NotificationsScreen from './screens/Notifications';
+import { clearTokens, getStudentId } from './api/auth';
+import {
+  setupNotificationChannelsAsync,
+  registerForPushNotificationsAsync,
+  unregisterPushNotificationsAsync,
+} from './utils/pushNotifications';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -135,6 +141,11 @@ const tabStyles = StyleSheet.create({
 function MainTabs({ navigation }: any) {
   const handleLogout = async () => {
     try {
+      await unregisterPushNotificationsAsync();
+    } catch (e) {
+      console.warn('Unregister push on logout error:', e);
+    }
+    try {
       await clearTokens();
     } catch (e) {
       console.warn('Logout error:', e);
@@ -158,18 +169,77 @@ function MainTabs({ navigation }: any) {
       <Tab.Screen name="Profile">
         {props => <Profile {...props} onLogout={handleLogout} />}
       </Tab.Screen>
-      <Tab.Screen name="Notifications" component={Notifications} />
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
     </Tab.Navigator>
   );
 }
 
 export default function App() {
+  const navigationRef = useNavigationContainerRef();
+
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_500Medium,
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
     JetBrainsMono_700Bold,
   });
+
+  // Deep linking helper for push notifications
+  const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
+    try {
+      const data = response?.notification?.request?.content?.data as any;
+      const targetScreen = data?.screen || data?.route;
+      if (!targetScreen) return;
+
+      const validTabs = ['Home', 'Borrowed', 'Academics', 'Profile', 'Notifications'];
+      if (validTabs.includes(targetScreen)) {
+        if (navigationRef.isReady()) {
+          (navigationRef as any).navigate('MainTabs', { screen: targetScreen });
+        } else {
+          setTimeout(() => {
+            if (navigationRef.isReady()) {
+              (navigationRef as any).navigate('MainTabs', { screen: targetScreen });
+            }
+          }, 600);
+        }
+      }
+    } catch (err) {
+      console.warn('Error handling notification response navigation:', err);
+    }
+  };
+
+  // Push notification channels & response listener setup
+  useEffect(() => {
+    // 1. Configure high-priority Android notification channels
+    setupNotificationChannelsAsync().catch(err => {
+      console.warn('Notification channel setup error:', err);
+    });
+
+    // 2. Re-sync push token if user already has an active session
+    getStudentId().then(studentId => {
+      if (studentId) {
+        registerForPushNotificationsAsync(studentId).catch(err => {
+          console.warn('Push notification re-sync error:', err);
+        });
+      }
+    });
+
+    // 3. Handle cold-start launch from killed state
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        handleNotificationResponse(response);
+      }
+    });
+
+    // 4. Handle foreground / background taps on received notifications
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      handleNotificationResponse(response);
+    });
+
+    return () => {
+      responseSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -196,7 +266,7 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer theme={DefaultTheme}>
+    <NavigationContainer ref={navigationRef} theme={DefaultTheme}>
       <Stack.Navigator initialRouteName="Login">
         {/* Login Screen (No Header) */}
         <Stack.Screen

@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
-from models import db, Librarian
+from models import db, Librarian, DeviceToken
 from routes.auth_routes import auth_bp
 from routes.web_routes import web_bp
 from routes.api_routes import api_bp
@@ -80,6 +80,26 @@ def create_app():
             # Populate due_date for any existing active issues lacking an explicit due date
             try:
                 db.session.execute(text("UPDATE issue_record SET due_date = datetime(timestamp, '+14 days') WHERE action = 'Issue' AND due_date IS NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            # Ensure device_token table and indexes exist for native push notifications
+            try:
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS device_token (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id VARCHAR(50) NOT NULL,
+                        token VARCHAR(255) UNIQUE NOT NULL,
+                        platform VARCHAR(20) DEFAULT 'android',
+                        is_active BOOLEAN DEFAULT 1,
+                        created_at DATETIME,
+                        updated_at DATETIME,
+                        FOREIGN KEY(student_id) REFERENCES student(id)
+                    )
+                """))
+                db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_device_token_student_id ON device_token (student_id)"))
+                db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_device_token_token ON device_token (token)"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()

@@ -22,6 +22,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { loginWithCredentials, getRefreshToken, storeAuthData, getSavedStudentId } from '../api/auth';
 import apiClient from '../api/client';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { registerForPushNotificationsAsync } from '../utils/pushNotifications';
 
 const withTimeout = (promise: Promise<any>, ms = 3000) => {
   return Promise.race([
@@ -101,6 +102,9 @@ export default function Login({ navigation }: any) {
     setLoading(true);
     try {
       const data = await loginWithCredentials(studentId, password);
+      registerForPushNotificationsAsync(studentId).catch(err => {
+        console.warn('Push registration on login error:', err);
+      });
       navigation.replace('MainTabs');
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Invalid credentials';
@@ -149,6 +153,13 @@ export default function Login({ navigation }: any) {
 
           if (data.refresh_token && data.student_id) {
             await storeAuthData(data.refresh_token, data.student_id);
+          }
+
+          const activeStudentId = data.student_id || studentId;
+          if (activeStudentId) {
+            registerForPushNotificationsAsync(activeStudentId).catch(err => {
+              console.warn('Push registration on bio login error:', err);
+            });
           }
 
           navigation.replace('MainTabs');

@@ -119,6 +119,27 @@ class AuditLog(db.Model):
     ip_address = db.Column(db.String(50), nullable=True)
     details = db.Column(db.Text, nullable=True)
 
+class DeviceToken(db.Model):
+    __tablename__ = 'device_token'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(50), db.ForeignKey('student.id'), nullable=False, index=True)
+    token = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    platform = db.Column(db.String(20), default='android')
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'student_id': self.student_id,
+            'token': self.token,
+            'platform': self.platform,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 def log_audit(user_id, action, details):
     from flask import request
     try:

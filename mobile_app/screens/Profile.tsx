@@ -29,6 +29,7 @@ import { JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 
 import { getDashboard, changePassword, getFullImageUrl, uploadAvatar } from '../api/client';
 import { getStudentId, clearTokens } from '../api/auth';
+import { unregisterPushNotificationsAsync } from '../utils/pushNotifications';
 import { ProfileSkeleton, ErrorState, withMinimumDelay } from '../components/Skeleton';
 
 const C = {
@@ -278,6 +279,11 @@ export default function Profile({ navigation, onLogout }: ProfileProps) {
           text: 'Log Out',
           style: 'destructive',
           onPress: async () => {
+            try {
+              await unregisterPushNotificationsAsync();
+            } catch (e) {
+              console.warn('Unregister push on logout error:', e);
+            }
             try {
               await clearTokens();
             } catch (e) {

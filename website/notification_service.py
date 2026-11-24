@@ -1,8 +1,102 @@
 import datetime
 from datetime import timedelta
 import json
+import urllib.request
+import urllib.error
 from sqlalchemy import func
-from models import db, Student, Book, IssueRecord, Notification
+from models import db, Student, Book, IssueRecord, Notification, DeviceToken
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+def send_expo_push(student_id=None, title="", body="", data=None, channel_id="tcea-library-alerts", student_ids=None, tokens=None):
+    """
+    Sends native OS push notifications via Expo Push API (https://exp.host/--/api/v2/push/send).
+    Supports offline-queueing (ttl=28 days), high-priority native heads-up alerts,
+    sound, channels, batching up to 100 tokens, and auto-deactivation of stale tokens (DeviceNotRegistered).
+    """
+    try:
+        resolved_tokens = []
+        if tokens:
+            resolved_tokens = [t for t in tokens if t and (t.startswith("ExponentPushToken[") or t.startswith("ExpoPushToken["))]
+        elif student_ids:
+            devices = DeviceToken.query.filter(DeviceToken.student_id.in_(student_ids), DeviceToken.is_active == True).all()
+            resolved_tokens = [d.token for d in devices if d.token]
+        elif student_id:
+            devices = DeviceToken.query.filter_by(student_id=student_id, is_active=True).all()
+            resolved_tokens = [d.token for d in devices if d.token]
+
+        # Deduplicate tokens
+        resolved_tokens = list(dict.fromkeys(resolved_tokens))
+        if not resolved_tokens:
+            return {"status": "no_tokens", "delivered": 0}
+
+        payload_data = dict(data) if data else {}
+        messages = []
+        for tok in resolved_tokens:
+            messages.append({
+                "to": tok,
+                "title": title or "TCEA Library",
+                "body": body or "",
+                "data": payload_data,
+                "sound": "default",
+                "priority": "high",
+                "channelId": channel_id,
+                "ttl": 2419200  # 28 days for offline queuing in FCM
+            })
+
+        chunk_size = 100
+        delivered_count = 0
+        stale_tokens = []
+
+        for i in range(0, len(messages), chunk_size):
+            chunk_messages = messages[i:i + chunk_size]
+            chunk_tokens = resolved_tokens[i:i + chunk_size]
+            json_bytes = json.dumps(chunk_messages).encode('utf-8')
+
+            req = urllib.request.Request(
+                EXPO_PUSH_URL,
+                data=json_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Accept-Encoding": "gzip, deflate"
+                },
+                method="POST"
+            )
+
+            try:
+                with urllib.request.urlopen(req, timeout=8) as response:
+                    res_body = response.read().decode('utf-8')
+                    res_json = json.loads(res_body)
+                    data_items = res_json.get("data", [])
+                    for idx, item in enumerate(data_items):
+                        if item.get("status") == "ok":
+                            delivered_count += 1
+                        elif item.get("status") == "error":
+                            details = item.get("details", {})
+                            if details.get("error") == "DeviceNotRegistered" and idx < len(chunk_tokens):
+                                stale_tokens.append(chunk_tokens[idx])
+            except urllib.error.HTTPError as http_err:
+                err_content = http_err.read().decode('utf-8') if http_err.fp else ""
+                print(f"[Expo Push] HTTP Error {http_err.code}: {err_content}")
+            except Exception as net_err:
+                print(f"[Expo Push] Network Error: {net_err}")
+
+        # Automatically deactivate stale tokens
+        if stale_tokens:
+            try:
+                DeviceToken.query.filter(DeviceToken.token.in_(stale_tokens)).update({"is_active": False}, synchronize_session=False)
+                db.session.commit()
+                print(f"[Expo Push] Deactivated {len(stale_tokens)} stale device token(s).")
+            except Exception as e:
+                db.session.rollback()
+                print(f"[Expo Push] Error deactivating stale tokens: {e}")
+
+        return {"status": "success", "delivered": delivered_count, "tokens_count": len(resolved_tokens)}
+
+    except Exception as e:
+        print(f"[Expo Push] Dispatcher Exception: {e}")
+        return {"status": "error", "message": str(e), "delivered": 0}
 
 def cleanup_old_notifications():
     try:
@@ -92,6 +186,7 @@ def sync_student_loan_notifications(student_id):
         # Rule A: 2-Day Advance Due Reminder
         if 0 <= days_until_due <= 2:
             dedup_key = f"due_soon:{last_issue.id}:{due_date_str}"
+            is_new = Notification.query.filter_by(student_id=student_id, dedup_key=dedup_key).first() is None
             if days_until_due == 1:
                 title = "Book due tomorrow"
             elif days_until_due == 0:
@@ -108,12 +203,21 @@ def sync_student_loan_notifications(student_id):
                 meta={"dueDate": due_date_display, "chipText": f"Due {due_date_display}", "route": "Borrowed"},
                 dedup_key=dedup_key
             )
+            if is_new:
+                send_expo_push(
+                    student_id=student_id,
+                    title=title,
+                    body=body,
+                    data={"screen": "Borrowed", "route": "Borrowed", "bookId": b.id},
+                    channel_id="tcea-library-urgent"
+                )
 
         # Rule B: 1 High-Priority Overdue Alert Per Day
         if today > due_date_date:
             overdue_days = (today - due_date_date).days
             pending_fine = overdue_days * 5
             dedup_key = f"overdue:{student_id}:{last_issue.id}:{today_str}"
+            is_new = Notification.query.filter_by(student_id=student_id, dedup_key=dedup_key).first() is None
             title = f"Book overdue by {overdue_days} {'day' if overdue_days == 1 else 'days'}"
             body = f"{b.title} was due on {due_date_display}. Return it today to stop the fine from growing."
             create_notification(
@@ -130,12 +234,20 @@ def sync_student_loan_notifications(student_id):
                 },
                 dedup_key=dedup_key
             )
+            if is_new:
+                send_expo_push(
+                    student_id=student_id,
+                    title=title,
+                    body=body,
+                    data={"screen": "Borrowed", "route": "Borrowed", "bookId": b.id, "amount": pending_fine},
+                    channel_id="tcea-library-urgent"
+                )
 
 def notify_issue_book(student_id, book):
     """Rule 2a: Digital Issue Receipt"""
     due_date = datetime.datetime.now() + datetime.timedelta(days=14)
     due_date_display = due_date.strftime('%d %b %Y')
-    return create_notification(
+    notif = create_notification(
         student_id=student_id,
         notif_type='issued',
         title="Book issued",
@@ -143,6 +255,14 @@ def notify_issue_book(student_id, book):
         channel_id='updates',
         meta={"dueDate": due_date_display, "chipText": due_date_display, "route": "Borrowed"}
     )
+    send_expo_push(
+        student_id=student_id,
+        title="Book issued",
+        body=f"'{book.title}' is yours until {due_date_display}.",
+        data={"screen": "Borrowed", "route": "Borrowed", "bookId": book.id},
+        channel_id="tcea-library-alerts"
+    )
+    return notif
 
 def notify_return_book(student_id, book, fine_paid=0):
     """Rule 2b & 2c: Digital Return Receipt and Fine Added"""
@@ -154,6 +274,15 @@ def notify_return_book(student_id, book, fine_paid=0):
         body=f"{book.title} was returned. Thank you!",
         channel_id='updates',
         meta={"returnedDate": today_display, "chipText": "No dues" if fine_paid == 0 else f"Fine ₹{int(fine_paid)}", "route": "Borrowed"}
+    )
+
+    body_text = f"'{book.title}' was returned successfully." + (f" ₹{int(fine_paid)} fine paid." if fine_paid > 0 else "")
+    send_expo_push(
+        student_id=student_id,
+        title="Book returned",
+        body=body_text,
+        data={"screen": "Borrowed", "route": "Borrowed", "bookId": book.id},
+        channel_id="tcea-library-alerts"
     )
 
     if fine_paid > 0:
@@ -187,6 +316,7 @@ def notify_new_paper(paper):
 
     count = 0
     chip_text = f"{dept or 'CST'} · Sem {sem or '5'}"
+    target_ids = []
     for stu in target_students:
         create_notification(
             student_id=stu.id,
@@ -196,7 +326,17 @@ def notify_new_paper(paper):
             channel_id='updates',
             meta={"department": dept, "semester": str(sem), "chipText": chip_text, "route": "Academics"}
         )
+        target_ids.append(stu.id)
         count += 1
+
+    if target_ids:
+        send_expo_push(
+            student_ids=target_ids,
+            title="New question papers added",
+            body=f"New {paper.filename or 'exam'} question papers for your semester are now in the Digital Archives.",
+            data={"screen": "Academics", "route": "Academics"},
+            channel_id="tcea-library-alerts"
+        )
     return count
 
 def notify_new_book(book):
@@ -233,6 +373,8 @@ def notify_broadcast(title, body, important=False):
     students = Student.query.all()
     count = 0
     channel = 'urgent' if important else 'updates'
+    expo_channel = 'tcea-library-urgent' if important else 'tcea-library-alerts'
+    all_ids = []
     for stu in students:
         create_notification(
             student_id=stu.id,
@@ -242,7 +384,17 @@ def notify_broadcast(title, body, important=False):
             channel_id=channel,
             meta={"chipText": "Sent to all students"}
         )
+        all_ids.append(stu.id)
         count += 1
+
+    if all_ids:
+        send_expo_push(
+            student_ids=all_ids,
+            title=title,
+            body=body,
+            data={"screen": "Notifications", "route": "Notifications"},
+            channel_id=expo_channel
+        )
     return count
 
 def notify_renewal_approved(student_id, book, requested_days, new_due_date):
@@ -252,7 +404,7 @@ def notify_renewal_approved(student_id, book, requested_days, new_due_date):
     book_id = book.id if book else ""
     title = "Loan Successfully Renewed"
     body = f"Your loan for '{book_title}' has been extended by {requested_days} days. New due date is {due_str}."
-    return create_notification(
+    notif = create_notification(
         student_id=student_id,
         notif_type='renewed',
         title=title,
@@ -266,6 +418,14 @@ def notify_renewal_approved(student_id, book, requested_days, new_due_date):
             "bookId": book_id
         }
     )
+    send_expo_push(
+        student_id=student_id,
+        title=title,
+        body=body,
+        data={"screen": "Borrowed", "route": "Borrowed", "bookId": book_id},
+        channel_id="tcea-library-alerts"
+    )
+    return notif
 
 def notify_renewal_rejected(student_id, book, reason, current_due_date):
     """Notifies student when librarian rejects loan renewal"""
@@ -275,7 +435,7 @@ def notify_renewal_rejected(student_id, book, reason, current_due_date):
     title = "Renewal Request Declined"
     reason_text = f" ({reason})" if reason else ""
     body = f"Your renewal request for '{book_title}' could not be approved{reason_text}. Please return the book by {due_str}."
-    return create_notification(
+    notif = create_notification(
         student_id=student_id,
         notif_type='notice',
         title=title,
@@ -290,6 +450,14 @@ def notify_renewal_rejected(student_id, book, reason, current_due_date):
             "reason": reason or ""
         }
     )
+    send_expo_push(
+        student_id=student_id,
+        title=title,
+        body=body,
+        data={"screen": "Borrowed", "route": "Borrowed", "bookId": book_id},
+        channel_id="tcea-library-alerts"
+    )
+    return notif
 
 def ensure_initial_notifications(student_id):
     """

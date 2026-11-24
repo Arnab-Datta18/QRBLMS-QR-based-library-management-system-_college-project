@@ -114,4 +114,32 @@ export const requestBookRenewal = async (
   return response.data;
 };
 
+export const registerDeviceToken = async (
+  student_id: string,
+  token: string,
+  platform: string = 'android'
+) => {
+  const response = await apiClient.post('/register-device', {
+    student_id,
+    token,
+    platform,
+  });
+  return response.data;
+};
+
+export const unregisterDeviceToken = async (token: string, student_id?: string) => {
+  const response = await apiClient.post('/unregister-device', {
+    token,
+    student_id,
+  });
+  return response.data;
+};
+
+export const sendTestPush = async (student_id: string) => {
+  const response = await apiClient.post('/notifications/test-push', {
+    student_id,
+  });
+  return response.data;
+};
+
 export default apiClient;

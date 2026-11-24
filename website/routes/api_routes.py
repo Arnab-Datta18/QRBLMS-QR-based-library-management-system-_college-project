@@ -4,7 +4,7 @@ import os
 import io
 import json
 from flask import Blueprint, jsonify, request, current_app
-from models import Student, Book, IssueRecord, Paper, Notification, RenewalRequest, db, log_audit
+from models import Student, Book, IssueRecord, Paper, Notification, RenewalRequest, DeviceToken, db, log_audit
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -15,6 +15,7 @@ from notification_service import (
     notify_broadcast,
     ensure_initial_notifications,
     sync_student_loan_notifications,
+    send_expo_push,
 )
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -702,6 +703,107 @@ def api_broadcast_notification():
         "status": "success",
         "message": f"Broadcast sent to {count} students",
         "count": count
+    }), 200
+
+@api_bp.route('/register-device', methods=['POST'])
+@api_bp.route('/register_device', methods=['POST'])
+def api_register_device():
+    """
+    Registers or reassigns an Expo push notification token for a student device.
+    Supports auto-reassignment if a different student logs into the same physical device.
+    """
+    data = request.get_json() or {}
+    student_id = data.get('student_id')
+    token = data.get('token')
+    platform = data.get('platform', 'android')
+
+    if not student_id or not token:
+        return jsonify({"status": "error", "message": "Missing student_id or token"}), 400
+
+    token = str(token).strip()
+    if not (token.startswith("ExponentPushToken[") or token.startswith("ExpoPushToken[")):
+        return jsonify({"status": "error", "message": "Invalid Expo push token format"}), 400
+
+    try:
+        now = datetime.datetime.utcnow()
+        device = DeviceToken.query.filter_by(token=token).first()
+        if device:
+            device.student_id = student_id
+            device.platform = platform or 'android'
+            device.is_active = True
+            device.updated_at = now
+        else:
+            device = DeviceToken(
+                student_id=student_id,
+                token=token,
+                platform=platform or 'android',
+                is_active=True,
+                created_at=now,
+                updated_at=now
+            )
+            db.session.add(device)
+
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Device token registered successfully",
+            "device": device.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error registering device token: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@api_bp.route('/unregister-device', methods=['POST'])
+@api_bp.route('/unregister_device', methods=['POST'])
+def api_unregister_device():
+    """
+    Deactivates an Expo push token (e.g. on user logout).
+    """
+    data = request.get_json() or {}
+    token = data.get('token')
+
+    if not token:
+        return jsonify({"status": "error", "message": "Missing token"}), 400
+
+    token = str(token).strip()
+    try:
+        device = DeviceToken.query.filter_by(token=token).first()
+        if device:
+            device.is_active = False
+            device.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
+            return jsonify({"status": "success", "message": "Device unregistered successfully"}), 200
+        return jsonify({"status": "success", "message": "Token not found, already inactive"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error unregistering device token: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@api_bp.route('/notifications/test-push', methods=['POST'])
+def api_test_push_notification():
+    """
+    Sends an immediate test push notification to verify connectivity.
+    """
+    data = request.get_json() or {}
+    student_id = data.get('student_id')
+
+    if not student_id:
+        return jsonify({"status": "error", "message": "Missing student_id"}), 400
+
+    result = send_expo_push(
+        student_id=student_id,
+        title="TCEA Library Connected",
+        body="Native notifications are active on this device.",
+        data={"screen": "Notifications", "route": "Notifications"},
+        channel_id="tcea-library-alerts"
+    )
+
+    return jsonify({
+        "status": "success",
+        "result": result
     }), 200
 
 @api_bp.route('/books/catalog/<student_id>', methods=['GET'])
