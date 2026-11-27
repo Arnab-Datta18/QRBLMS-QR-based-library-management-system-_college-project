@@ -805,7 +805,7 @@ def api_test_push_notification():
     result = send_expo_push(
         student_id=student_id,
         title="TCEA Library Connected",
-        body="Library alerts and due notices are active for your device.",
+        body="Active — Due notices and library alerts are connected.",
         data={"screen": "Notifications", "route": "Notifications"},
         channel_id="tcea-library-alerts"
     )

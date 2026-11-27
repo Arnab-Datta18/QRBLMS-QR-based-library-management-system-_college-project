@@ -264,7 +264,7 @@ def sync_student_loan_notifications(student_id):
                 title = "Book Due Today"
             else:
                 title = f"Due in {days_until_due} Days"
-            body = f"'{b_title}' is due {due_date_display}. Return or renew at desk."
+            body = f"Due {due_date_display} — '{b_title}'. Return or renew at desk."
             create_notification(
                 student_id=student_id,
                 notif_type='due',
@@ -290,7 +290,7 @@ def sync_student_loan_notifications(student_id):
             dedup_key = f"overdue:{student_id}:{last_issue.id}:{today_str}"
             is_new = Notification.query.filter_by(student_id=student_id, dedup_key=dedup_key).first() is None
             title = f"Book Overdue ({overdue_days}d)"
-            body = f"'{b_title}' overdue. Fine ₹{pending_fine}. Return to desk."
+            body = f"Overdue by {overdue_days}d (Fine ₹{pending_fine}) — '{b_title}'. Return to desk."
             create_notification(
                 student_id=student_id,
                 notif_type='overdue',
@@ -320,7 +320,7 @@ def notify_issue_book(student_id, book):
     due_date = datetime.datetime.now() + datetime.timedelta(days=14)
     due_date_display = due_date.strftime('%d %b %Y')
     title = "Book Issued"
-    body = f"'{b_title}' issued. Return by {due_date_display}."
+    body = f"Due {due_date_display} — '{b_title}' issued at circulation desk."
     notif = create_notification(
         student_id=student_id,
         notif_type='issued',
@@ -344,9 +344,9 @@ def notify_return_book(student_id, book, fine_paid=0):
     today_display = datetime.datetime.now().strftime('%d %b %Y')
     title = "Book Returned"
     if fine_paid > 0:
-        body = f"'{b_title}' returned. Late fine ₹{int(fine_paid)} paid."
+        body = f"Fine ₹{int(fine_paid)} paid — '{b_title}' returned at desk."
     else:
-        body = f"'{b_title}' returned at circulation desk. No dues."
+        body = f"No dues — '{b_title}' returned at circulation desk."
 
     notif_return = create_notification(
         student_id=student_id,
@@ -370,7 +370,7 @@ def notify_return_book(student_id, book, fine_paid=0):
             student_id=student_id,
             notif_type='fine',
             title="Library Fine Paid",
-            body=f"Fine receipt of ₹{int(fine_paid)} recorded for '{b_title}'.",
+            body=f"Receipt ₹{int(fine_paid)} — Fine settled for '{b_title}'.",
             channel_id='urgent',
             meta={"amount": int(fine_paid), "chipText": f"+ ₹{int(fine_paid)}", "route": "Borrowed"}
         )
@@ -398,7 +398,7 @@ def notify_new_paper(paper):
     chip_text = f"{dept or 'CST'} · Sem {sem or '5'}"
     target_ids = []
     title = "New PYQ Available"
-    body = f"New {dept or 'CST'} Sem {sem or ''} papers added to Digital Archives."
+    body = f"{dept or 'CST'} Sem {sem or ''} papers added — Digital Archives."
     for stu in target_students:
         create_notification(
             student_id=stu.id,
@@ -429,7 +429,7 @@ def notify_new_book(book):
     chip_text = f"{dept or 'CST'} Catalog"
     b_title = _format_book_title(book.title if book else "Book")
     title = "New Library Arrival"
-    body = f"'{b_title}' added to {dept or 'TCEA'} catalog."
+    body = f"New arrival in {dept or 'Library'} — '{b_title}' added to catalog."
     for stu in target_students:
         create_notification(
             student_id=stu.id,
@@ -491,7 +491,7 @@ def notify_renewal_approved(student_id, book, requested_days, new_due_date):
     b_title = _format_book_title(book_title)
     book_id = book.id if book else ""
     title = "Loan Renewal Approved"
-    body = f"'{b_title}' extended +{requested_days}d. Due: {due_str}."
+    body = f"Extended +{requested_days}d (Due {due_str}) — '{b_title}'."
     notif = create_notification(
         student_id=student_id,
         notif_type='renewed',
@@ -523,7 +523,7 @@ def notify_renewal_rejected(student_id, book, reason, current_due_date):
     book_id = book.id if book else ""
     title = "Renewal Request Declined"
     reason_clean = f" ({reason[:16].rstrip()}…)" if reason and len(reason) > 18 else (f" ({reason})" if reason else "")
-    body = f"'{b_title}' renewal declined{reason_clean}. Return by {due_str}."
+    body = f"Due {due_str} — '{b_title}' renewal declined{reason_clean}."
     notif = create_notification(
         student_id=student_id,
         notif_type='notice',
@@ -565,7 +565,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "due",
             "title": "Return Due Soon",
-            "body": "Clean Architecture is due in 2 days. Return or renew.",
+            "body": "Due in 2 days — 'Clean Architecture'. Return or renew.",
             "channel_id": "updates",
             "meta": {"dueDate": (now + datetime.timedelta(days=2)).strftime('%d %b %Y'), "chipText": "Due in 2 days", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(minutes=10),
@@ -574,7 +574,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "paper",
             "title": "New PYQ Available",
-            "body": f"Winter 2024 {dept} Sem 5 papers added to Digital Archives.",
+            "body": f"{dept} Sem 5 papers added — Digital Archives.",
             "channel_id": "updates",
             "meta": {"department": dept, "semester": "5th", "chipText": f"{dept} · 5th Semester", "route": "Academics"},
             "created_at": now - datetime.timedelta(hours=2),
@@ -583,7 +583,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "issued",
             "title": "Book Issued",
-            "body": "Database System Concepts issued. Return by 01 Nov 2026.",
+            "body": "Due 01 Nov 2026 — 'Database System Concepts' issued at desk.",
             "channel_id": "updates",
             "meta": {"dueDate": "01 Nov 2026", "chipText": "01 Nov 2026", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(hours=5),
@@ -593,7 +593,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "reserve",
             "title": "Ready for Pickup",
-            "body": "Operating System Concepts is held at desk for 48 hours.",
+            "body": "Held for 48h at desk — 'Operating System Concepts'.",
             "channel_id": "updates",
             "meta": {"chipText": "Ready at Desk", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=1, hours=2),
@@ -602,7 +602,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "overdue",
             "title": "Book Overdue (3d)",
-            "body": "Compilers is overdue by 3 days. Return to circulation desk.",
+            "body": "Overdue by 3d (Fine ₹15) — 'Compilers'. Return to desk.",
             "channel_id": "urgent",
             "meta": {"amount": 15, "chipText": "Pending fine ₹15", "dueDate": "15 Oct 2026", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=1, hours=6),
@@ -611,7 +611,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "renewed",
             "title": "Loan Renewal Approved",
-            "body": "AI: A Modern Approach extended +14d. Due: 02 Nov 2026.",
+            "body": "Extended +14d (Due 02 Nov 2026) — 'AI: A Modern Approach'.",
             "channel_id": "updates",
             "meta": {"dueDate": "02 Nov 2026", "chipText": "02 Nov 2026", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=1, hours=10),
@@ -621,7 +621,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "fine",
             "title": "Library Fine Paid",
-            "body": "Fine receipt of ₹15 recorded for Compilers (CS-1082).",
+            "body": "Receipt ₹15 — Fine settled for 'Compilers (CS-1082)'.",
             "channel_id": "urgent",
             "meta": {"amount": 15, "chipText": "+ ₹15", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=4),
@@ -630,7 +630,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "book",
             "title": "New Library Arrival",
-            "body": f"6 new Cloud Computing books added to {dept} catalog.",
+            "body": f"New in {dept} — 'Cloud Computing' added to catalog.",
             "channel_id": "updates",
             "meta": {"chipText": f"{dept} Catalog", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=7),
@@ -639,7 +639,7 @@ def ensure_initial_notifications(student_id):
         {
             "type": "returned",
             "title": "Book Returned",
-            "body": "Modern Operating Systems returned at desk. No dues.",
+            "body": "No dues — 'Modern Operating Systems' returned at desk.",
             "channel_id": "updates",
             "meta": {"chipText": "No dues", "returnedDate": (now - datetime.timedelta(days=10)).strftime('%d %b %Y'), "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=10),

@@ -96,7 +96,7 @@ def _execute_daily_notifications_core():
                     title = "Book Due Today"
                 else:
                     title = f"Due in {days_until_due} Days"
-                body = f"'{b_title}' is due {due_date_display}. Return or renew at desk."
+                body = f"Due {due_date_display} — '{b_title}'. Return or renew at desk."
 
                 create_notification(
                     student_id=stu_id,
@@ -124,7 +124,7 @@ def _execute_daily_notifications_core():
             existing = Notification.query.filter_by(student_id=stu_id, dedup_key=dedup_key).first()
             if not existing:
                 title = f"Book Overdue ({overdue_days}d)"
-                body = f"'{b_title}' overdue. Fine ₹{pending_fine}. Return to desk."
+                body = f"Overdue by {overdue_days}d (Fine ₹{pending_fine}) — '{b_title}'. Return to desk."
 
                 create_notification(
                     student_id=stu_id,
