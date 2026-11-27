@@ -786,12 +786,21 @@ def api_unregister_device():
 def api_test_push_notification():
     """
     Sends an immediate test push notification to verify connectivity.
+    Surfaces detailed diagnostics about registered device tokens and Expo API tickets.
     """
     data = request.get_json() or {}
     student_id = data.get('student_id')
 
     if not student_id:
         return jsonify({"status": "error", "message": "Missing student_id"}), 400
+
+    student_id = str(student_id).strip()
+    all_devices = DeviceToken.query.filter_by(student_id=student_id).all()
+    active_devices = [d for d in all_devices if d.is_active]
+
+    current_app.logger.info(
+        f"[Test Push] Student {student_id}: {len(all_devices)} total device(s) in registry, {len(active_devices)} active."
+    )
 
     result = send_expo_push(
         student_id=student_id,
@@ -801,8 +810,17 @@ def api_test_push_notification():
         channel_id="tcea-library-alerts"
     )
 
+    current_app.logger.info(f"[Test Push] Result for {student_id}: {result}")
+
     return jsonify({
         "status": "success",
+        "student_id": student_id,
+        "device_summary": {
+            "total_registered": len(all_devices),
+            "active_registered": len(active_devices),
+            "tokens": [d.token for d in active_devices],
+            "inactive_tokens": [d.token for d in all_devices if not d.is_active]
+        },
         "result": result
     }), 200
 

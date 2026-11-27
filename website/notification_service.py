@@ -28,7 +28,15 @@ def send_expo_push(student_id=None, title="", body="", data=None, channel_id="tc
         # Deduplicate tokens
         resolved_tokens = list(dict.fromkeys(resolved_tokens))
         if not resolved_tokens:
-            return {"status": "no_tokens", "delivered": 0}
+            return {
+                "status": "no_tokens",
+                "delivered": 0,
+                "tokens_count": 0,
+                "tickets": [],
+                "errors": [],
+                "stale_tokens": [],
+                "message": "No active device tokens found for recipient."
+            }
 
         payload_data = dict(data) if data else {}
         messages = []
@@ -47,6 +55,8 @@ def send_expo_push(student_id=None, title="", body="", data=None, channel_id="tc
         chunk_size = 100
         delivered_count = 0
         stale_tokens = []
+        tickets = []
+        errors = []
 
         for i in range(0, len(messages), chunk_size):
             chunk_messages = messages[i:i + chunk_size]
@@ -69,34 +79,87 @@ def send_expo_push(student_id=None, title="", body="", data=None, channel_id="tc
                     res_body = response.read().decode('utf-8')
                     res_json = json.loads(res_body)
                     data_items = res_json.get("data", [])
+                    print(f"[Expo Push] API Response status={getattr(response, 'status', 200)}, tickets={len(data_items)}")
                     for idx, item in enumerate(data_items):
-                        if item.get("status") == "ok":
+                        tok = chunk_tokens[idx] if idx < len(chunk_tokens) else None
+                        item_status = item.get("status")
+                        ticket_entry = {
+                            "token": tok,
+                            "status": item_status,
+                            "id": item.get("id"),
+                            "message": item.get("message"),
+                            "details": item.get("details", {})
+                        }
+
+                        if item_status == "ok":
                             delivered_count += 1
-                        elif item.get("status") == "error":
-                            details = item.get("details", {})
-                            if details.get("error") == "DeviceNotRegistered" and idx < len(chunk_tokens):
-                                stale_tokens.append(chunk_tokens[idx])
+                            ticket_entry["delivered"] = True
+                            print(f"[Expo Push] Delivered ticket id={item.get('id')} to token={tok}")
+                        elif item_status == "error":
+                            ticket_entry["delivered"] = False
+                            err_details = item.get("details", {})
+                            err_name = err_details.get("error") if isinstance(err_details, dict) else None
+                            ticket_entry["error"] = err_name
+                            print(f"[Expo Push] Ticket error for token={tok}: {err_name} - {item.get('message')}")
+                            if err_name == "DeviceNotRegistered" and tok:
+                                stale_tokens.append(tok)
+                                ticket_entry["marked_stale"] = True
+
+                        tickets.append(ticket_entry)
+
             except urllib.error.HTTPError as http_err:
                 err_content = http_err.read().decode('utf-8') if http_err.fp else ""
                 print(f"[Expo Push] HTTP Error {http_err.code}: {err_content}")
+                errors.append({
+                    "type": "http_error",
+                    "code": http_err.code,
+                    "content": err_content,
+                    "tokens": chunk_tokens
+                })
             except Exception as net_err:
                 print(f"[Expo Push] Network Error: {net_err}")
+                errors.append({
+                    "type": "network_error",
+                    "message": str(net_err),
+                    "tokens": chunk_tokens
+                })
 
         # Automatically deactivate stale tokens
+        deactivated_count = 0
         if stale_tokens:
             try:
-                DeviceToken.query.filter(DeviceToken.token.in_(stale_tokens)).update({"is_active": False}, synchronize_session=False)
+                deactivated_count = DeviceToken.query.filter(DeviceToken.token.in_(stale_tokens)).update({"is_active": False}, synchronize_session=False)
                 db.session.commit()
                 print(f"[Expo Push] Deactivated {len(stale_tokens)} stale device token(s).")
             except Exception as e:
                 db.session.rollback()
                 print(f"[Expo Push] Error deactivating stale tokens: {e}")
 
-        return {"status": "success", "delivered": delivered_count, "tokens_count": len(resolved_tokens)}
+        # Update tickets with confirmation of whether token was deactivated in DB
+        for t in tickets:
+            t["is_stale_deactivated"] = bool(t.get("token") in stale_tokens)
+
+        return {
+            "status": "success",
+            "delivered": delivered_count,
+            "tokens_count": len(resolved_tokens),
+            "tickets": tickets,
+            "errors": errors,
+            "stale_tokens": stale_tokens,
+            "deactivated_count": len(stale_tokens)
+        }
 
     except Exception as e:
         print(f"[Expo Push] Dispatcher Exception: {e}")
-        return {"status": "error", "message": str(e), "delivered": 0}
+        return {
+            "status": "error",
+            "message": str(e),
+            "delivered": 0,
+            "tokens_count": len(resolved_tokens) if 'resolved_tokens' in locals() else 0,
+            "tickets": [],
+            "errors": [{"type": "exception", "message": str(e)}],
+            "stale_tokens": []
+        }
 
 def cleanup_old_notifications():
     try:

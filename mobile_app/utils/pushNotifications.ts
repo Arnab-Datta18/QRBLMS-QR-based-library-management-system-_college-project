@@ -79,26 +79,28 @@ export async function registerForPushNotificationsAsync(studentId: string): Prom
     }
 
     const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ||
-      Constants.easConfig?.projectId ||
+      Constants?.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any)?.easConfig?.projectId ??
       FALLBACK_EAS_PROJECT_ID;
+
+    console.log(`[Push] Resolving push token using EAS projectId: ${projectId}`);
 
     const pushTokenResponse = await Notifications.getExpoPushTokenAsync({
       projectId,
     });
 
-    const token = pushTokenResponse.data;
+    const token = pushTokenResponse?.data;
     if (!token) {
-      console.warn('[Push] Could not retrieve Expo push token.');
+      console.warn('[Push] Could not retrieve Expo push token (empty data returned).');
       return null;
     }
 
     // Persist token in secure storage for subsequent re-sync and unregister
     await SecureStore.setItemAsync(PUSH_TOKEN_STORAGE_KEY, token);
 
-    // Register token in backend database
-    await registerDeviceToken(studentId, token, Platform.OS);
-    console.log(`[Push] Registered push token for student ${studentId}: ${token}`);
+    // Always synchronize current token with backend registry
+    const regResult = await registerDeviceToken(studentId.trim(), token, Platform.OS);
+    console.log(`[Push] Registered push token for student ${studentId}: ${token}`, regResult);
 
     return token;
   } catch (error) {
