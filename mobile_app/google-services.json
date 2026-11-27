@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "748832013572",
+    "project_id": "qrblms-tcea-library-management",
+    "storage_bucket": "qrblms-tcea-library-management.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:748832013572:android:59efe939fe6bba0843e451",
+        "android_client_info": {
+          "package_name": "com.tcea.library"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTekm2SwoTQXMa6za4WC_uc9_7BziRTB0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

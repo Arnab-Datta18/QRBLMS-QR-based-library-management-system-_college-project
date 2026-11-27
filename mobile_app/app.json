@@ -17,6 +17,7 @@
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ],
+      "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "package": "com.tcea.library"
     },
