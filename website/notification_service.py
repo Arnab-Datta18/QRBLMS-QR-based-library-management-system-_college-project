@@ -8,6 +8,13 @@ from models import db, Student, Book, IssueRecord, Notification, DeviceToken
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
+def _format_book_title(title, max_len=26):
+    """Formats and truncates book titles cleanly for concise notification alerts."""
+    if not title:
+        return "Book"
+    t = str(title).strip()
+    return f"{t[:max_len].rstrip()}…" if len(t) > max_len else t
+
 def send_expo_push(student_id=None, title="", body="", data=None, channel_id="tcea-library-alerts", student_ids=None, tokens=None):
     """
     Sends native OS push notifications via Expo Push API (https://exp.host/--/api/v2/push/send).
@@ -245,18 +252,19 @@ def sync_student_loan_notifications(student_id):
         due_date_str = due_date.strftime('%Y-%m-%d')
         due_date_display = due_date.strftime('%d %b %Y')
         days_until_due = (due_date_date - today).days
+        b_title = _format_book_title(b.title)
 
         # Rule A: 2-Day Advance Due Reminder
         if 0 <= days_until_due <= 2:
             dedup_key = f"due_soon:{last_issue.id}:{due_date_str}"
             is_new = Notification.query.filter_by(student_id=student_id, dedup_key=dedup_key).first() is None
             if days_until_due == 1:
-                title = "Book due tomorrow"
+                title = "Book Due Tomorrow"
             elif days_until_due == 0:
-                title = "Book due today"
+                title = "Book Due Today"
             else:
-                title = f"Due in {days_until_due} days"
-            body = f"{b.title} is due on {due_date_display}. Return or renew it to avoid late fines."
+                title = f"Due in {days_until_due} Days"
+            body = f"'{b_title}' is due {due_date_display}. Return or renew at desk."
             create_notification(
                 student_id=student_id,
                 notif_type='due',
@@ -281,8 +289,8 @@ def sync_student_loan_notifications(student_id):
             pending_fine = overdue_days * 5
             dedup_key = f"overdue:{student_id}:{last_issue.id}:{today_str}"
             is_new = Notification.query.filter_by(student_id=student_id, dedup_key=dedup_key).first() is None
-            title = f"Book overdue by {overdue_days} {'day' if overdue_days == 1 else 'days'}"
-            body = f"{b.title} was due on {due_date_display}. Return it today to stop the fine from growing."
+            title = f"Book Overdue ({overdue_days}d)"
+            body = f"'{b_title}' overdue. Fine ₹{pending_fine}. Return to desk."
             create_notification(
                 student_id=student_id,
                 notif_type='overdue',
@@ -308,20 +316,23 @@ def sync_student_loan_notifications(student_id):
 
 def notify_issue_book(student_id, book):
     """Rule 2a: Digital Issue Receipt"""
+    b_title = _format_book_title(book.title if book else "Book")
     due_date = datetime.datetime.now() + datetime.timedelta(days=14)
     due_date_display = due_date.strftime('%d %b %Y')
+    title = "Book Issued"
+    body = f"'{b_title}' issued. Return by {due_date_display}."
     notif = create_notification(
         student_id=student_id,
         notif_type='issued',
-        title="Book issued",
-        body=f"{book.title} is yours until {due_date_display}.",
+        title=title,
+        body=body,
         channel_id='updates',
         meta={"dueDate": due_date_display, "chipText": due_date_display, "route": "Borrowed"}
     )
     send_expo_push(
         student_id=student_id,
-        title="Book issued",
-        body=f"'{book.title}' is yours until {due_date_display}.",
+        title=title,
+        body=body,
         data={"screen": "Borrowed", "route": "Borrowed", "bookId": book.id},
         channel_id="tcea-library-alerts"
     )
@@ -329,21 +340,27 @@ def notify_issue_book(student_id, book):
 
 def notify_return_book(student_id, book, fine_paid=0):
     """Rule 2b & 2c: Digital Return Receipt and Fine Added"""
+    b_title = _format_book_title(book.title if book else "Book")
     today_display = datetime.datetime.now().strftime('%d %b %Y')
+    title = "Book Returned"
+    if fine_paid > 0:
+        body = f"'{b_title}' returned. Late fine ₹{int(fine_paid)} paid."
+    else:
+        body = f"'{b_title}' returned at circulation desk. No dues."
+
     notif_return = create_notification(
         student_id=student_id,
         notif_type='returned',
-        title="Book returned",
-        body=f"{book.title} was returned. Thank you!",
+        title=title,
+        body=body,
         channel_id='updates',
         meta={"returnedDate": today_display, "chipText": "No dues" if fine_paid == 0 else f"Fine ₹{int(fine_paid)}", "route": "Borrowed"}
     )
 
-    body_text = f"'{book.title}' was returned successfully." + (f" ₹{int(fine_paid)} fine paid." if fine_paid > 0 else "")
     send_expo_push(
         student_id=student_id,
-        title="Book returned",
-        body=body_text,
+        title=title,
+        body=body,
         data={"screen": "Borrowed", "route": "Borrowed", "bookId": book.id},
         channel_id="tcea-library-alerts"
     )
@@ -352,8 +369,8 @@ def notify_return_book(student_id, book, fine_paid=0):
         create_notification(
             student_id=student_id,
             notif_type='fine',
-            title="Fine added to your account",
-            body=f"A fine of ₹{int(fine_paid)} was added for the late return of {book.title}.",
+            title="Library Fine Paid",
+            body=f"Fine receipt of ₹{int(fine_paid)} recorded for '{b_title}'.",
             channel_id='urgent',
             meta={"amount": int(fine_paid), "chipText": f"+ ₹{int(fine_paid)}", "route": "Borrowed"}
         )
@@ -380,12 +397,14 @@ def notify_new_paper(paper):
     count = 0
     chip_text = f"{dept or 'CST'} · Sem {sem or '5'}"
     target_ids = []
+    title = "New PYQ Available"
+    body = f"New {dept or 'CST'} Sem {sem or ''} papers added to Digital Archives."
     for stu in target_students:
         create_notification(
             student_id=stu.id,
             notif_type='paper',
-            title="New question papers added",
-            body=f"New {paper.filename or 'exam'} question papers for your semester are now in the Digital Archives.",
+            title=title,
+            body=body,
             channel_id='updates',
             meta={"department": dept, "semester": str(sem), "chipText": chip_text, "route": "Academics"}
         )
@@ -395,8 +414,8 @@ def notify_new_paper(paper):
     if target_ids:
         send_expo_push(
             student_ids=target_ids,
-            title="New question papers added",
-            body=f"New {paper.filename or 'exam'} question papers for your semester are now in the Digital Archives.",
+            title=title,
+            body=body,
             data={"screen": "Academics", "route": "Academics"},
             channel_id="tcea-library-alerts"
         )
@@ -408,12 +427,15 @@ def notify_new_book(book):
     target_students = Student.query.filter_by(dept=dept).all() if dept else Student.query.all()
     count = 0
     chip_text = f"{dept or 'CST'} Catalog"
+    b_title = _format_book_title(book.title if book else "Book")
+    title = "New Library Arrival"
+    body = f"'{b_title}' added to {dept or 'TCEA'} catalog."
     for stu in target_students:
         create_notification(
             student_id=stu.id,
             notif_type='book',
-            title=f"New arrivals in {dept or 'Library'}",
-            body=f"{book.title} is now available in the library catalog.",
+            title=title,
+            body=body,
             channel_id='updates',
             meta={"chipText": chip_text, "route": "Borrowed"}
         )
@@ -422,11 +444,13 @@ def notify_new_book(book):
 
 def notify_password_changed(student_id):
     """Rule 4: Account Security Alert"""
+    title = "Password Updated"
+    body = "Portal password was updated. Contact desk if unauthorized."
     return create_notification(
         student_id=student_id,
         notif_type='security',
-        title="Password changed",
-        body="Your student portal password was changed. Contact the library if this wasn't you.",
+        title=title,
+        body=body,
         channel_id='urgent',
         meta={"chipText": "Security", "route": "Profile"}
     )
@@ -464,9 +488,10 @@ def notify_renewal_approved(student_id, book, requested_days, new_due_date):
     """Notifies student when librarian approves loan renewal"""
     due_str = new_due_date.strftime('%d %b %Y') if isinstance(new_due_date, (datetime.datetime, datetime.date)) else str(new_due_date)
     book_title = book.title if book else "Book"
+    b_title = _format_book_title(book_title)
     book_id = book.id if book else ""
-    title = "Loan Successfully Renewed"
-    body = f"Your loan for '{book_title}' has been extended by {requested_days} days. New due date is {due_str}."
+    title = "Loan Renewal Approved"
+    body = f"'{b_title}' extended +{requested_days}d. Due: {due_str}."
     notif = create_notification(
         student_id=student_id,
         notif_type='renewed',
@@ -494,10 +519,11 @@ def notify_renewal_rejected(student_id, book, reason, current_due_date):
     """Notifies student when librarian rejects loan renewal"""
     due_str = current_due_date.strftime('%d %b %Y') if isinstance(current_due_date, (datetime.datetime, datetime.date)) else str(current_due_date)
     book_title = book.title if book else "Book"
+    b_title = _format_book_title(book_title)
     book_id = book.id if book else ""
     title = "Renewal Request Declined"
-    reason_text = f" ({reason})" if reason else ""
-    body = f"Your renewal request for '{book_title}' could not be approved{reason_text}. Please return the book by {due_str}."
+    reason_clean = f" ({reason[:16].rstrip()}…)" if reason and len(reason) > 18 else (f" ({reason})" if reason else "")
+    body = f"'{b_title}' renewal declined{reason_clean}. Return by {due_str}."
     notif = create_notification(
         student_id=student_id,
         notif_type='notice',
@@ -538,8 +564,8 @@ def ensure_initial_notifications(student_id):
         # --- TODAY ---
         {
             "type": "due",
-            "title": "Return Due in 2 Days",
-            "body": "Clean Architecture: A Craftsman's Guide is due on Oct 20. Renew or return to avoid overdue fines.",
+            "title": "Return Due Soon",
+            "body": "Clean Architecture is due in 2 days. Return or renew.",
             "channel_id": "updates",
             "meta": {"dueDate": (now + datetime.timedelta(days=2)).strftime('%d %b %Y'), "chipText": "Due in 2 days", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(minutes=10),
@@ -547,8 +573,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "paper",
-            "title": "New CST Sem 5 PYQ Alert",
-            "body": "Winter 2024 Theory of Computation & Computer Networks question papers are now in the Digital Archives.",
+            "title": "New PYQ Available",
+            "body": f"Winter 2024 {dept} Sem 5 papers added to Digital Archives.",
             "channel_id": "updates",
             "meta": {"department": dept, "semester": "5th", "chipText": f"{dept} · 5th Semester", "route": "Academics"},
             "created_at": now - datetime.timedelta(hours=2),
@@ -556,8 +582,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "issued",
-            "title": "Digital Issue Receipt",
-            "body": "Database System Concepts (Accession #CS-309) has been issued to your account. Due date is Nov 01, 2026.",
+            "title": "Book Issued",
+            "body": "Database System Concepts issued. Return by 01 Nov 2026.",
             "channel_id": "updates",
             "meta": {"dueDate": "01 Nov 2026", "chipText": "01 Nov 2026", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(hours=5),
@@ -566,8 +592,8 @@ def ensure_initial_notifications(student_id):
         # --- YESTERDAY ---
         {
             "type": "reserve",
-            "title": "Reservation Ready for Pickup",
-            "body": "Operating System Concepts is available at Circulation Counter 2. Hold valid for 48 hours.",
+            "title": "Ready for Pickup",
+            "body": "Operating System Concepts is held at desk for 48 hours.",
             "channel_id": "updates",
             "meta": {"chipText": "Ready at Desk", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=1, hours=2),
@@ -575,8 +601,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "overdue",
-            "title": "Book overdue by 3 days",
-            "body": "Compilers: Principles, Techniques, and Tools was due 3 days ago. Return it today to stop the fine from growing.",
+            "title": "Book Overdue (3d)",
+            "body": "Compilers is overdue by 3 days. Return to circulation desk.",
             "channel_id": "urgent",
             "meta": {"amount": 15, "chipText": "Pending fine ₹15", "dueDate": "15 Oct 2026", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=1, hours=6),
@@ -584,8 +610,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "renewed",
-            "title": "Loan Successfully Renewed",
-            "body": "Artificial Intelligence: A Modern Approach has been extended by 14 days. New due date is Nov 02.",
+            "title": "Loan Renewal Approved",
+            "body": "AI: A Modern Approach extended +14d. Due: 02 Nov 2026.",
             "channel_id": "updates",
             "meta": {"dueDate": "02 Nov 2026", "chipText": "02 Nov 2026", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=1, hours=10),
@@ -594,8 +620,8 @@ def ensure_initial_notifications(student_id):
         # --- EARLIER ---
         {
             "type": "fine",
-            "title": "Fine added to your account",
-            "body": "A late fine of ₹15.00 was added for the late return of Compilers (CS-1082).",
+            "title": "Library Fine Paid",
+            "body": "Fine receipt of ₹15 recorded for Compilers (CS-1082).",
             "channel_id": "urgent",
             "meta": {"amount": 15, "chipText": "+ ₹15", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=4),
@@ -603,8 +629,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "book",
-            "title": f"New arrivals in {dept}",
-            "body": "6 new books on Cloud Computing & Distributed Systems added to the CST library stack.",
+            "title": "New Library Arrival",
+            "body": f"6 new Cloud Computing books added to {dept} catalog.",
             "channel_id": "updates",
             "meta": {"chipText": f"{dept} Catalog", "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=7),
@@ -612,8 +638,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "returned",
-            "title": "Book returned",
-            "body": "Modern Operating Systems was returned. Thank you!",
+            "title": "Book Returned",
+            "body": "Modern Operating Systems returned at desk. No dues.",
             "channel_id": "updates",
             "meta": {"chipText": "No dues", "returnedDate": (now - datetime.timedelta(days=10)).strftime('%d %b %Y'), "route": "Borrowed"},
             "created_at": now - datetime.timedelta(days=10),
@@ -621,8 +647,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "security",
-            "title": "Password changed",
-            "body": "Your student portal password was changed. Contact the library if this wasn't you.",
+            "title": "Password Updated",
+            "body": "Portal password was updated. Contact desk if unauthorized.",
             "channel_id": "urgent",
             "meta": {"chipText": "Security", "route": "Profile"},
             "created_at": now - datetime.timedelta(days=12),
@@ -630,8 +656,8 @@ def ensure_initial_notifications(student_id):
         },
         {
             "type": "notice",
-            "title": "Global Librarian Broadcast",
-            "body": "Central Library reading hall will remain open until 8:00 PM during upcoming mid-term examination week.",
+            "title": "Central Library Notice",
+            "body": "Reading hall open until 8:00 PM during mid-term exam week.",
             "channel_id": "updates",
             "meta": {"chipText": "Sent to all students"},
             "created_at": now - datetime.timedelta(days=14),

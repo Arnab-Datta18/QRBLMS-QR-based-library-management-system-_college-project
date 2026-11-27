@@ -21,7 +21,7 @@ from flask import has_app_context, current_app
 from App import create_app
 from models import db, Student, Book, IssueRecord, Notification
 from sqlalchemy import func
-from notification_service import create_notification, send_expo_push, cleanup_old_notifications
+from notification_service import create_notification, send_expo_push, cleanup_old_notifications, _format_book_title
 
 def _execute_daily_notifications_core():
     start_time = datetime.datetime.now()
@@ -83,6 +83,7 @@ def _execute_daily_notifications_core():
         due_date_str = due_date.strftime('%Y-%m-%d')
         due_date_display = due_date.strftime('%d %b %Y')
         days_until_due = (due_date_date - today).days
+        b_title = _format_book_title(book_title)
 
         # 2-Day Advance Due Reminder (0 to 2 days remaining)
         if 0 <= days_until_due <= 2:
@@ -90,12 +91,12 @@ def _execute_daily_notifications_core():
             existing = Notification.query.filter_by(student_id=stu_id, dedup_key=dedup_key).first()
             if not existing:
                 if days_until_due == 1:
-                    title = "Book due tomorrow"
+                    title = "Book Due Tomorrow"
                 elif days_until_due == 0:
-                    title = "Book due today"
+                    title = "Book Due Today"
                 else:
-                    title = f"Due in {days_until_due} days"
-                body = f"'{book_title}' is due on {due_date_display}. Return or renew it to avoid late fines."
+                    title = f"Due in {days_until_due} Days"
+                body = f"'{b_title}' is due {due_date_display}. Return or renew at desk."
 
                 create_notification(
                     student_id=stu_id,
@@ -122,8 +123,8 @@ def _execute_daily_notifications_core():
             dedup_key = f"overdue:{stu_id}:{last_issue.id}:{today_str}"
             existing = Notification.query.filter_by(student_id=stu_id, dedup_key=dedup_key).first()
             if not existing:
-                title = f"Book overdue by {overdue_days} {'day' if overdue_days == 1 else 'days'}"
-                body = f"'{book_title}' was due on {due_date_display}. Return it today to stop the fine from growing."
+                title = f"Book Overdue ({overdue_days}d)"
+                body = f"'{b_title}' overdue. Fine ₹{pending_fine}. Return to desk."
 
                 create_notification(
                     student_id=stu_id,
